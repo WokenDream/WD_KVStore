@@ -21,7 +21,7 @@ public class KVCache {
     private HashMap<String, String> cache; // key is the "key", value is the "value"
 
     // maintain the order for cache replacement policy
-    // LFU: least is at head; LRU: least is head
+    // LFU: least is at head; LRU: least is at head
     private LinkedList<CacheNode> list = new LinkedList<>();
 
     private ReentrantLock lock = new ReentrantLock();
@@ -31,7 +31,7 @@ public class KVCache {
 
     public KVCache(int cacheCapacity, ReplacementPolicy replacePolicy) {
         // cache setup
-        if (cacheCapacity <= 1) {
+        if (cacheCapacity < 1) {
             cacheCapacity = 100;
         }
         this.remainSize = cacheCapacity;
@@ -99,7 +99,8 @@ public class KVCache {
     }
 
     /**
-     * Ensure the cach
+     * Ensure minimum capacity of the cache. The resulting capacity will be:
+     * min(newCacheCapacity, old cache capacity)
      * @param newCacheCapacity
      */
     public void ensureCacheCapacity(int newCacheCapacity) {
@@ -109,8 +110,8 @@ public class KVCache {
     }
 
     /**
-     * evict the cache so that the remaining size of the cache
-     * is large enough to support the required size
+     * Evict the cache so that the remaining size of the cache
+     * is large enough to support the required size.
      * @param requiredSize size required
      */
     private void evict(int requiredSize) {
@@ -131,10 +132,13 @@ public class KVCache {
      */
     private void insert(String key, String value) {
         CacheNode node = new CacheNode(key);
+
         if (replacePolicy == ReplacementPolicy.LFU) {
-            node.freq = 1;
+            list.addFirst(node);
+        } else {
+            list.addLast(node);
         }
-        list.add(node);
+
         cache.put(key, value);
         remainSize -= value.length();
     }
@@ -150,39 +154,25 @@ public class KVCache {
      */
     private void update(String key, String value, int changeInSize) {
         CacheNode node = new CacheNode(key);
+
         if (replacePolicy == ReplacementPolicy.LRU) {
             list.remove(node);
             list.add(node);
         } else if (replacePolicy == ReplacementPolicy.LFU) {
-            updateLFUList(key);
+            updateLFUList(node);
         }
         cache.put(key, value);
-        remainSize += changeInSize;
+        remainSize -= changeInSize;
 
-//        switch (replacePolicy) {
-//            case FIFO:
-//                cache.put(key, value);
-//                remainSize += changeInSize;
-//            case LRU:
-//                list.remove(node);
-//                list.add(node);
-//                cache.put(key, value);
-//                remainSize += changeInSize;
-//            case LFU:
-//                updateLFUList(key);
-//                cache.put(key, value);
-//                remainSize += changeInSize;
-//        }
     }
 
     /**
      * Update the position and frequency of the node with the given key
      * Assumptions:
-     * 1. the node having the given key is already in the list
-     * @param key key of the target node
+     * 1. the given node is already in the list
+     * @param node the node to be updated
      */
-    private void updateLFUList(String key) {
-        CacheNode node = new CacheNode(key);
+    private void updateLFUList(CacheNode node) {
         int i = list.indexOf(node);
         node = list.remove(i);
         ++(node.freq);
@@ -191,13 +181,13 @@ public class KVCache {
 
     /**
      * A helper function for inserting cache node into LFU list in the correct order
-     * @param node
+     * @param node the node to be updated in the order list
      */
     private void insertIntoLFUList(CacheNode node) {
         int len = list.size();
         int i = 0;
         while (i < len) {
-            if (list.get(i).freq <= node.freq) {
+            if (node.freq <= list.get(i).freq) {
                 break;
             }
             ++i;

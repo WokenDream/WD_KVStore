@@ -10,7 +10,7 @@ enum ReplacementPolicy {
 
 class CacheNode {
     String key;
-    int freq = 0;
+    int freq = 1;
 
     public CacheNode(String key) {
         this.key = key;
