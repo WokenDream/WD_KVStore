@@ -85,8 +85,10 @@ public class KVCache {
         ++numOfReader;
         lock.unlock();
 
-        String val = null;
-        // TODO: worker code
+        String val = cache.get(key);
+        if (val != null) {
+            updateOrderList(key);
+        }
 
         lock.lock();
         --numOfReader;
@@ -193,5 +195,24 @@ public class KVCache {
             ++i;
         }
         list.add(i, node);
+    }
+
+    /**
+     * Update the position of the cache node associated with the given key
+     * @param key key of the target node
+     * Assumptions:
+     * 1. key != null
+     * 2. the target node is already in the list
+     */
+    private void updateOrderList(String key) {
+        CacheNode node = new CacheNode(key);
+        switch (replacePolicy) {
+            case LRU:
+                int i = list.indexOf(node);
+                node = list.remove(i);
+                list.addLast(node);
+            case LFU:
+                updateLFUList(node);
+        }
     }
 }
