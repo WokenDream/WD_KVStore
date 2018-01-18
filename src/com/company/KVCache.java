@@ -15,20 +15,29 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class KVCache {
 
-    private int cacheSize;
-    private ReplacementPolicy replacePolicy;
-    private HashMap<String, LinkedList<CacheNode>> cache;
+    private int remainSize;
+    private int cacheCapacity;
+    private final ReplacementPolicy replacePolicy;
+    private HashMap<String, String> cache; // key is the "key", value is the "value"
+
+    // maintain the order for cache replacement policy
+    // LFU: least is at head; LRU: least is head
+    private LinkedList<CacheNode> list = new LinkedList<>();
 
     private ReentrantLock lock = new ReentrantLock();
     private int numOfReader = 0;
     private Condition noReaderCondition = lock.newCondition();
 
 
-    public KVCache(int cacheSize, ReplacementPolicy replacePolicy) {
+    public KVCache(int cacheCapacity, ReplacementPolicy replacePolicy) {
         // cache setup
-        this.cacheSize = cacheSize;
+        if (cacheCapacity <= 1) {
+            cacheCapacity = 100;
+        }
+        this.remainSize = cacheCapacity;
+        this.cacheCapacity = cacheCapacity;
         this.replacePolicy = replacePolicy;
-        cache = new HashMap<>();
+        this.cache = new HashMap<>();
     }
 
     /**
@@ -38,6 +47,10 @@ public class KVCache {
      */
     public void putKV(String key, String value) {
         lock.lock();
+        if (value.length() > cacheCapacity) {
+            lock.unlock();
+            return;
+        }
         while (numOfReader > 0) {
             try {
                 noReaderCondition.await();
@@ -46,7 +59,19 @@ public class KVCache {
             }
         }
 
-        // TODO: if space is not enough => {evict}; then => {insert into cache}
+        String val = cache.get(key);
+        if (val == null) {
+            if (remainSize < value.length()) {
+                evict(value.length());
+            }
+            insert(key, value);
+        } else {
+            int oldLen = val.length(), newLen = value.length();
+            if (remainSize + oldLen < newLen) {
+                evict(newLen - oldLen);
+            }
+            update(key, value, newLen - oldLen);
+        }
         lock.unlock();
     }
 
@@ -62,10 +87,6 @@ public class KVCache {
 
         String val = null;
         // TODO: worker code
-        LinkedList<CacheNode> list = cache.get(key);
-        if (list != null) {
-
-        }
 
         lock.lock();
         --numOfReader;
@@ -75,5 +96,112 @@ public class KVCache {
         lock.unlock();
 
         return val;
+    }
+
+    /**
+     * Ensure the cach
+     * @param newCacheCapacity
+     */
+    public void ensureCacheCapacity(int newCacheCapacity) {
+        if (cacheCapacity < newCacheCapacity) {
+            cacheCapacity = newCacheCapacity;
+        }
+    }
+
+    /**
+     * evict the cache so that the remaining size of the cache
+     * is large enough to support the required size
+     * @param requiredSize size required
+     */
+    private void evict(int requiredSize) {
+        while (remainSize < requiredSize) {
+            CacheNode node = list.poll();
+            String removedVal = cache.remove(node.key);
+            remainSize += removedVal.length();
+        }
+    }
+
+    /**
+     * Insert the given key-value pair into cache.
+     * Assumptions:
+     * 1. the given pair is a new pair
+     * 2. the cache is big enough
+     * @param key the key of pair
+     * @param value the value of pair
+     */
+    private void insert(String key, String value) {
+        CacheNode node = new CacheNode(key);
+        if (replacePolicy == ReplacementPolicy.LFU) {
+            node.freq = 1;
+        }
+        list.add(node);
+        cache.put(key, value);
+        remainSize -= value.length();
+    }
+
+    /**
+     * Update the pair with the given key
+     * Assumptions:
+     * 1. the pair already exists in the cache
+     * 2. the cache is big enough
+     * @param key key of the pair
+     * @param value new value of the pair
+     * @param changeInSize the total change of the cacheSize = newLen - oldLen of the updated element
+     */
+    private void update(String key, String value, int changeInSize) {
+        CacheNode node = new CacheNode(key);
+        if (replacePolicy == ReplacementPolicy.LRU) {
+            list.remove(node);
+            list.add(node);
+        } else if (replacePolicy == ReplacementPolicy.LFU) {
+            updateLFUList(key);
+        }
+        cache.put(key, value);
+        remainSize += changeInSize;
+
+//        switch (replacePolicy) {
+//            case FIFO:
+//                cache.put(key, value);
+//                remainSize += changeInSize;
+//            case LRU:
+//                list.remove(node);
+//                list.add(node);
+//                cache.put(key, value);
+//                remainSize += changeInSize;
+//            case LFU:
+//                updateLFUList(key);
+//                cache.put(key, value);
+//                remainSize += changeInSize;
+//        }
+    }
+
+    /**
+     * Update the position and frequency of the node with the given key
+     * Assumptions:
+     * 1. the node having the given key is already in the list
+     * @param key key of the target node
+     */
+    private void updateLFUList(String key) {
+        CacheNode node = new CacheNode(key);
+        int i = list.indexOf(node);
+        node = list.remove(i);
+        ++(node.freq);
+        insertIntoLFUList(node);
+    }
+
+    /**
+     * A helper function for inserting cache node into LFU list in the correct order
+     * @param node
+     */
+    private void insertIntoLFUList(CacheNode node) {
+        int len = list.size();
+        int i = 0;
+        while (i < len) {
+            if (list.get(i).freq <= node.freq) {
+                break;
+            }
+            ++i;
+        }
+        list.add(i, node);
     }
 }

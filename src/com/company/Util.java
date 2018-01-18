@@ -9,9 +9,17 @@ enum ReplacementPolicy {
 }
 
 class CacheNode {
-    int freq = 0;
     String key;
-    String val;
+    int freq = 0;
+
+    public CacheNode(String key) {
+        this.key = key;
+    }
+
+    public CacheNode(String key, int freq) {
+        this.key = key;
+        this.freq = freq;
+    }
 
     public boolean equals(Object obj) {
         return (obj instanceof CacheNode) && ((CacheNode)obj).key.equals(this.key);
