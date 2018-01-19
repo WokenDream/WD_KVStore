@@ -19,11 +19,14 @@ public class KVStorage {
     private KVCache cache;
 
     public KVStorage(String dbPath, int cacheCapacity, CacheStrategy strategy) throws InvalidPathException {
+
         if (dbPath == null || dbPath.isEmpty()) {
+            // TODO: logging
             throw new InvalidPathException(dbPath, "Database path cannot be empty");
         } else if (dbPath.charAt(dbPath.length() - 1) != '/') {
-            throw new InvalidPathException(dbPath, "Database path must end with '/'");
+            dbPath = dbPath + "/";
         }
+
         File dir = new File(dbPath);
         if (!dir.exists()) {
             if (!dir.mkdir()) {
@@ -31,6 +34,7 @@ public class KVStorage {
                 throw new InvalidPathException(dbPath, "Invalid database path");
             }
         }
+        // TODO: create a class that is the same as this class except it has no cache
         cache = new KVCache(cacheCapacity, strategy);
     }
 
@@ -63,7 +67,7 @@ public class KVStorage {
         if (file.exists()) {
             // TODO: if KV pair already exists in this file => {update}, else => {append to file}
         } else {
-
+            // TODO: create a new file with the KV pair
         }
         lock.unlock();
     }
@@ -75,10 +79,15 @@ public class KVStorage {
 
         String val = cache.getKV(key);
         if (val == null) {
-            // TODO: look up from disk
+            // TODO: read from disk and put in cache, then lock so multiple loading from disk is possible
+            // TODO: may need to check if there is IO exception if the file is already open in read mode
+//            lock.lock();
+//            cache.putKV(key, val);
+        } else {
+            lock.lock();
+            cache.updateOrderList(key);
         }
 
-        lock.lock();
         --numOfReader;
         if (numOfReader == 0) {
             noReaderCondition.signal();

@@ -10,8 +10,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 
 /**
- * This is a thread-safe cache class allowing specify the cache size and replacement policy
- * The cache instance allows read from multiple threads if the cache is not being updated.
+ * This is a non thread-safe cache class
  */
 public class KVCache {
 
@@ -24,10 +23,6 @@ public class KVCache {
     // LFU: least is at head; LRU: least is at head
     // FIFO: put to tail, pop from head; None: same as FIFO
     private LinkedList<CacheNode> list = new LinkedList<>();
-
-    private ReentrantLock lock = new ReentrantLock();
-    private int numOfReader = 0;
-    private Condition noReaderCondition = lock.newCondition();
 
 
     public KVCache(int cacheCapacity, CacheStrategy replacePolicy) {
@@ -50,17 +45,8 @@ public class KVCache {
      * @param value value of the data
      */
     public void putKV(String key, String value) {
-        lock.lock();
         if (value.length() > cacheCapacity) {
-            lock.unlock();
             return;
-        }
-        while (numOfReader > 0) {
-            try {
-                noReaderCondition.await();
-            } catch (InterruptedException e) {
-                // TODO: log
-            }
         }
 
         String val = cache.get(key);
@@ -76,7 +62,6 @@ public class KVCache {
             }
             update(key, value, newLen - oldLen);
         }
-        lock.unlock();
     }
 
     /**
@@ -85,25 +70,27 @@ public class KVCache {
      * @return value associated with the key
      */
     public String getKV(String key) {
-        lock.lock();
-        ++numOfReader;
-        lock.unlock();
+        return cache.get(key);
+    }
 
-        String val = cache.get(key);
-        if (val != null && replacePolicy != CacheStrategy.FIFO) {
-            lock.lock();
-            updateOrderList(key);
-            lock.unlock();
+    /**
+     * Update the position of the cache node associated with the given key
+     * This function can only be called if getKV(String key) != null
+     * @param key key of the target node
+     * Assumptions:
+     * 1. key != null
+     * 2. the target node is already in the list
+     */
+    public void updateOrderList(String key) {
+        CacheNode node = new CacheNode(key);
+        switch (replacePolicy) {
+            case LRU:
+                int i = list.indexOf(node);
+                node = list.remove(i);
+                list.addLast(node);
+            case LFU:
+                updateLFUList(node);
         }
-
-        lock.lock();
-        --numOfReader;
-        if (numOfReader == 0) {
-            noReaderCondition.signal();
-        }
-        lock.unlock();
-
-        return val;
     }
 
     /**
@@ -203,22 +190,4 @@ public class KVCache {
         list.add(i, node);
     }
 
-    /**
-     * Update the position of the cache node associated with the given key
-     * @param key key of the target node
-     * Assumptions:
-     * 1. key != null
-     * 2. the target node is already in the list
-     */
-    private void updateOrderList(String key) {
-        CacheNode node = new CacheNode(key);
-        switch (replacePolicy) {
-            case LRU:
-                int i = list.indexOf(node);
-                node = list.remove(i);
-                list.addLast(node);
-            case LFU:
-                updateLFUList(node);
-        }
-    }
 }
