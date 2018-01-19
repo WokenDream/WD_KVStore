@@ -4,8 +4,8 @@ package com.company;
  * Created by tianqiliu on 2018-01-16.
  */
 
-enum ReplacementPolicy {
-    FIFO, LRU, LFU
+enum CacheStrategy {
+    None, FIFO, LRU, LFU
 }
 
 class CacheNode {

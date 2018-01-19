@@ -4,7 +4,7 @@ public class Main {
 
     public static void main(String[] args) {
 	// write your code here
-        KVCache cache = new KVCache(500, ReplacementPolicy.LRU);
+        KVCache cache = new KVCache(500, CacheStrategy.LRU);
         for (int i = 0; i < 100; ++i) {
             cache.putKV("" + i, i + " abcd- e78hsds");
         }

@@ -17,11 +17,12 @@ public class KVCache {
 
     private int remainSize;
     private int cacheCapacity;
-    private final ReplacementPolicy replacePolicy;
+    private final CacheStrategy replacePolicy;
     private HashMap<String, String> cache; // key is the "key", value is the "value"
 
     // maintain the order for cache replacement policy
     // LFU: least is at head; LRU: least is at head
+    // FIFO: put to tail, pop from head; None: same as FIFO
     private LinkedList<CacheNode> list = new LinkedList<>();
 
     private ReentrantLock lock = new ReentrantLock();
@@ -29,7 +30,7 @@ public class KVCache {
     private Condition noReaderCondition = lock.newCondition();
 
 
-    public KVCache(int cacheCapacity, ReplacementPolicy replacePolicy) {
+    public KVCache(int cacheCapacity, CacheStrategy replacePolicy) {
         // cache setup
         if (cacheCapacity < 1) {
             cacheCapacity = 100;
@@ -87,7 +88,9 @@ public class KVCache {
 
         String val = cache.get(key);
         if (val != null) {
+            lock.lock();
             updateOrderList(key);
+            lock.unlock();
         }
 
         lock.lock();
@@ -135,7 +138,7 @@ public class KVCache {
     private void insert(String key, String value) {
         CacheNode node = new CacheNode(key);
 
-        if (replacePolicy == ReplacementPolicy.LFU) {
+        if (replacePolicy == CacheStrategy.LFU) {
             list.addFirst(node);
         } else {
             list.addLast(node);
@@ -157,10 +160,10 @@ public class KVCache {
     private void update(String key, String value, int changeInSize) {
         CacheNode node = new CacheNode(key);
 
-        if (replacePolicy == ReplacementPolicy.LRU) {
+        if (replacePolicy == CacheStrategy.LRU) {
             list.remove(node);
             list.add(node);
-        } else if (replacePolicy == ReplacementPolicy.LFU) {
+        } else if (replacePolicy == CacheStrategy.LFU) {
             updateLFUList(node);
         }
         cache.put(key, value);
