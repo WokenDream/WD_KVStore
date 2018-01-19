@@ -35,6 +35,9 @@ public class KVCache {
         if (cacheCapacity < 1) {
             cacheCapacity = 100;
         }
+        if (replacePolicy == CacheStrategy.None) {
+            replacePolicy = CacheStrategy.FIFO;
+        }
         this.remainSize = cacheCapacity;
         this.cacheCapacity = cacheCapacity;
         this.replacePolicy = replacePolicy;
@@ -87,7 +90,7 @@ public class KVCache {
         lock.unlock();
 
         String val = cache.get(key);
-        if (val != null) {
+        if (val != null && replacePolicy != CacheStrategy.FIFO) {
             lock.lock();
             updateOrderList(key);
             lock.unlock();
