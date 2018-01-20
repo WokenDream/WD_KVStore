@@ -36,6 +36,7 @@ public class KVStorage {
                 throw new InvalidPathException(dbPath, "Invalid database path");
             }
         }
+        this.dbPath = dbPath;
         // TODO: create a class that is the same as this class except it has no cache
         cache = new KVCache(cacheCapacity, strategy);
     }
