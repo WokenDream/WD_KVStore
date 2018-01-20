@@ -1,7 +1,6 @@
 package com.company;
 
-import java.io.File;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.nio.file.InvalidPathException;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -16,9 +15,12 @@ public class KVStorage {
     private Condition noReaderCondition = lock.newCondition();
 
     private String dbPath = "./db/";
+    private final String keyIndicator = "k:";
+    private final String valIndicator = "v:";
+    private final int afterIndicator = 2;
     private KVCache cache;
 
-    public KVStorage(String dbPath, int cacheCapacity, CacheStrategy strategy) throws InvalidPathException {
+    public KVStorage(String dbPath, int cacheCapacity, CacheStrategy strategy) throws InvalidPathException, IOException {
 
         if (dbPath == null || dbPath.isEmpty()) {
             // TODO: logging
@@ -28,7 +30,7 @@ public class KVStorage {
         }
 
         File dir = new File(dbPath);
-        if (!dir.exists()) {
+        if (!dir.exists() || !dir.isDirectory()) {
             if (!dir.mkdir()) {
                 // TODO: logging invalid dir path
                 throw new InvalidPathException(dbPath, "Invalid database path");
@@ -38,18 +40,19 @@ public class KVStorage {
         cache = new KVCache(cacheCapacity, strategy);
     }
 
-    public KVStorage(int cacheCapacity, CacheStrategy strategy) {
+    public KVStorage(int cacheCapacity, CacheStrategy strategy) throws IOException {
         File dir = new File(dbPath);
-        if (!dir.exists()) {
+        if (!dir.exists() || !dir.isDirectory()) {
             if (!dir.mkdir()) {
                 // TODO: logging invalid dir path
                 throw new InvalidPathException(dbPath, "Database creation failed");
             }
         }
+
         cache = new KVCache(cacheCapacity, strategy);
     }
 
-    public void putKV(String key, String value) {
+    public void putKV(String key, String value) throws IOException {
         lock.lock();
         while (numOfReader > 0) {
             try {
@@ -59,15 +62,12 @@ public class KVStorage {
             }
         }
         cache.putKV(key, value);
-        StringBuilder sb = new StringBuilder(dbPath);
-        sb.append(key.hashCode());
 
-        String filePath = sb.toString();
-        File file = new File(filePath);
+        File file = new File(getFilePath(key));
         if (file.exists()) {
-            // TODO: if KV pair already exists in this file => {update}, else => {append to file}
+            updatePair(file, key, value);
         } else {
-            // TODO: create a new file with the KV pair
+            appendToFile(file, key, value);
         }
         lock.unlock();
     }
@@ -79,10 +79,31 @@ public class KVStorage {
 
         String val = cache.getKV(key);
         if (val == null) {
-            // TODO: read from disk and put in cache, then lock so multiple loading from disk is possible
-            // TODO: may need to check if there is IO exception if the file is already open in read mode
-//            lock.lock();
-//            cache.putKV(key, val);
+            try {
+                BufferedReader reader = new BufferedReader(new FileReader(getFilePath(key)));
+                String str;
+                while ((str = reader.readLine()) != null) {
+                    if (str.substring(afterIndicator).equals(key)) {
+                        val = reader.readLine().substring(afterIndicator);
+                        break;
+                    }
+                    reader.readLine();
+                }
+                reader.close();
+            } catch (FileNotFoundException e) {
+                // TODO: logging
+                // invalid key
+                System.out.println(e.getMessage());
+            } catch (IOException e) {
+                // TODO: logging
+                System.out.println(e.getMessage());
+            }
+
+            lock.lock();
+            if (val != null) {
+                cache.putKV(key, val);
+            }
+
         } else {
             lock.lock();
             cache.updateOrderList(key);
@@ -95,5 +116,59 @@ public class KVStorage {
         lock.unlock();
 
         return val;
+    }
+
+    private String getFilePath(String key) {
+        // let the hashcode of the key be the name of the file
+        StringBuilder sb = new StringBuilder(dbPath);
+        sb.append(key.hashCode());
+        sb.append(".txt");
+        return sb.toString();
+    }
+
+    private void appendToFile(File file, String key, String value) throws IOException {
+        BufferedWriter writer = new BufferedWriter(new FileWriter(file, true));
+        writer.write(keyIndicator + key);
+        writer.newLine();
+        writer.write(valIndicator + value);
+        writer.newLine();
+        writer.close();
+    }
+
+    private void updatePair(File file, String key, String value) throws IOException {
+        File tempFile = new File(dbPath + "temp.txt");
+        BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile));
+        BufferedReader reader = new BufferedReader(new FileReader(file));
+
+        String str;
+        while ((str = reader.readLine()) != null) {
+            writer.write(str);
+            writer.newLine();
+            if (str.substring(afterIndicator).equals(key)) {
+                writer.write(valIndicator + value);
+                writer.newLine();
+                reader.readLine();
+                break;
+            } else {
+                writer.write(reader.readLine());
+                writer.newLine();
+            }
+        }
+        while ((str = reader.readLine()) != null) {
+            writer.write(str);
+            writer.newLine();
+            writer.write(reader.readLine());
+            writer.newLine();
+        }
+        writer.close();
+        reader.close();
+        if (!file.delete()) {
+            // TODO: logging
+            throw new IOException("could not delete the old file");
+        }
+        if (!tempFile.renameTo(file)) {
+            // TODO: logging
+            throw new IOException("could not rename file");
+        }
     }
 }

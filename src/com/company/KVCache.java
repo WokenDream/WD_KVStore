@@ -41,6 +41,8 @@ public class KVCache {
 
     /**
      * Put the key-value pair into cache, eviction may take place
+     * 1. If the key does not exist, create a new record
+     * 2. otherwise update the existing record
      * @param key key of the data
      * @param value value of the data
      */
