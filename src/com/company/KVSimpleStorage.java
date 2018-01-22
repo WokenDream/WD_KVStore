@@ -44,6 +44,12 @@ public class KVSimpleStorage {
         }
     }
 
+    /**
+     * Create/update the given key-pair on disk.
+     * @param key given key
+     * @param value value associated with key
+     * @throws IOException
+     */
     public void putKV(String key, String value) throws IOException {
         lock.lock();
         while (numOfReader > 0) {
@@ -57,11 +63,16 @@ public class KVSimpleStorage {
         if (file.exists()) {
             updatePair(file, key, value);
         } else {
-            appendToFile(file, key, value);
+            createPair(file, key, value);
         }
         lock.unlock();
     }
 
+    /**
+     * Get the value of the given key from disk.
+     * @param key given key
+     * @return associated value
+     */
     public String getKV(String key) {
         lock.lock();
         ++numOfReader;
@@ -98,6 +109,13 @@ public class KVSimpleStorage {
         return val;
     }
 
+    /**
+     * Compute the file path given a key.
+     * Assumptions:
+     * 1. key != null
+     * @param key given key
+     * @return file path
+     */
     protected String getFilePath(String key) {
         // let the hashcode of the key be the name of the file
         StringBuilder sb = new StringBuilder(dbPath);
@@ -106,8 +124,8 @@ public class KVSimpleStorage {
         return sb.toString();
     }
 
-    protected void appendToFile(File file, String key, String value) throws IOException {
-        BufferedWriter writer = new BufferedWriter(new FileWriter(file, true));
+    protected void createPair(File file, String key, String value) throws IOException {
+        BufferedWriter writer = new BufferedWriter(new FileWriter(file));
         writer.write(keyIndicator + key);
         writer.newLine();
         writer.write(valIndicator + value);
@@ -115,24 +133,42 @@ public class KVSimpleStorage {
         writer.close();
     }
 
+    /**
+     * Update the key-value pair in the given file.
+     * If the pair does not exist, it creates the pair.
+     * The updated pair is put in the beiginning of the file
+     * for heuristic reason.
+     * Assumptions:
+     * 1. inputs are valid
+     * @param file given file
+     * @param key given key
+     * @param value new value associated with the key
+     * @throws IOException
+     */
     protected void updatePair(File file, String key, String value) throws IOException {
         File tempFile = new File(dbPath + "temp.txt");
         BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile));
         BufferedReader reader = new BufferedReader(new FileReader(file));
 
+        // put the given pair at the beginning of the file
+        writer.write(keyIndicator + key);
+        writer.newLine();
+        writer.write(valIndicator + value);
+        writer.newLine();
+
+        // read the old file into new file
+        // if the old file already contains the given key, omit it
         String str;
         while ((str = reader.readLine()) != null) {
+            if (str.substring(afterIndicator).equals(key)) {
+                reader.readLine(); // skip the old value
+                break;
+            }
+
             writer.write(str);
             writer.newLine();
-            if (str.substring(afterIndicator).equals(key)) {
-                writer.write(valIndicator + value);
-                writer.newLine();
-                reader.readLine();
-                break;
-            } else {
-                writer.write(reader.readLine());
-                writer.newLine();
-            }
+            writer.write(reader.readLine());
+            writer.newLine();
         }
         while ((str = reader.readLine()) != null) {
             writer.write(str);
@@ -140,6 +176,7 @@ public class KVSimpleStorage {
             writer.write(reader.readLine());
             writer.newLine();
         }
+
         writer.close();
         reader.close();
         if (!file.delete()) {

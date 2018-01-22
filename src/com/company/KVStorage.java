@@ -20,6 +20,12 @@ public class KVStorage extends KVSimpleStorage {
         cache = new KVCache(cacheCapacity, strategy);
     }
 
+    /**
+     * Create/update given key-value pair to disk and cache.
+     * @param key given key
+     * @param value value associated with key
+     * @throws IOException
+     */
     public void putKV(String key, String value) throws IOException {
         lock.lock();
         while (numOfReader > 0) {
@@ -35,11 +41,16 @@ public class KVStorage extends KVSimpleStorage {
         if (file.exists()) {
             updatePair(file, key, value);
         } else {
-            appendToFile(file, key, value);
+            createPair(file, key, value);
         }
         lock.unlock();
     }
 
+    /**
+     * Return the value of the associated key from cache/disk.
+     * @param key given key
+     * @return associated value
+     */
     public String getKV(String key) {
         lock.lock();
         ++numOfReader;
