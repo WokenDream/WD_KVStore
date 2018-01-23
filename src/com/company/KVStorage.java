@@ -28,22 +28,27 @@ public class KVStorage extends KVSimpleStorage {
      */
     public void putKV(String key, String value) throws IOException {
         lock.lock();
-        while (numOfReader > 0) {
-            try {
-                noReaderCondition.await();
-            } catch (InterruptedException e) {
-                // TODO: log
+        try {
+            while (numOfReader > 0) {
+                try {
+                    noReaderCondition.await();
+                } catch (InterruptedException e) {
+                    // TODO: log
+                }
             }
-        }
-        cache.putKV(key, value);
+            cache.putKV(key, value);
 
-        File file = new File(getFilePath(key));
-        if (file.exists()) {
-            updatePair(file, key, value);
-        } else {
-            createPair(file, key, value);
+            File file = new File(getFilePath(key));
+            if (file.exists()) {
+                updatePair(file, key, value);
+            } else {
+                createPair(file, key, value);
+            }
+        } catch (IOException e) {
+            throw e;
+        } finally {
+            lock.unlock();
         }
-        lock.unlock();
     }
 
     /**
@@ -51,7 +56,7 @@ public class KVStorage extends KVSimpleStorage {
      * @param key given key
      * @return associated value
      */
-    public String getKV(String key) {
+    public String getKV(String key) throws IOException {
         lock.lock();
         ++numOfReader;
         lock.unlock();
@@ -69,30 +74,31 @@ public class KVStorage extends KVSimpleStorage {
                     reader.readLine();
                 }
                 reader.close();
-            } catch (FileNotFoundException e) {
-                // TODO: logging
-                // invalid key
-                System.out.println(e.getMessage());
             } catch (IOException e) {
                 // TODO: logging
-                System.out.println(e.getMessage());
-            }
-
-            lock.lock();
-            if (val != null) {
-                cache.putKV(key, val);
+                // invalid key
+                throw e;
+            } finally {
+                lock.lock();
+                if (val != null) {
+                    cache.putKV(key, val);
+                }
+                --numOfReader;
+                if (numOfReader == 0) {
+                    noReaderCondition.signal();
+                }
+                lock.unlock();
             }
 
         } else {
             lock.lock();
             cache.updateOrderList(key);
+            --numOfReader;
+            if (numOfReader == 0) {
+                noReaderCondition.signal();
+            }
+            lock.unlock();
         }
-
-        --numOfReader;
-        if (numOfReader == 0) {
-            noReaderCondition.signal();
-        }
-        lock.unlock();
 
         return val;
     }
@@ -124,7 +130,11 @@ public class KVStorage extends KVSimpleStorage {
      * @return
      */
     public boolean inStorage(String key) {
-        return super.getKV(key) != null;
+        try {
+            return super.getKV(key) != null;
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     /**

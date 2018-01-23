@@ -52,20 +52,25 @@ public class KVSimpleStorage {
      */
     public void putKV(String key, String value) throws IOException {
         lock.lock();
-        while (numOfReader > 0) {
-            try {
-                noReaderCondition.await();
-            } catch (InterruptedException e) {
-                // TODO: log
+        try {
+            while (numOfReader > 0) {
+                try {
+                    noReaderCondition.await();
+                } catch (InterruptedException e) {
+                    // TODO: log
+                }
             }
+            File file = new File(getFilePath(key));
+            if (file.exists()) {
+                updatePair(file, key, value);
+            } else {
+                createPair(file, key, value);
+            }
+        } catch (IOException ioe) {
+            throw ioe;
+        } finally {
+            lock.unlock();
         }
-        File file = new File(getFilePath(key));
-        if (file.exists()) {
-            updatePair(file, key, value);
-        } else {
-            createPair(file, key, value);
-        }
-        lock.unlock();
     }
 
     /**
@@ -73,7 +78,7 @@ public class KVSimpleStorage {
      * @param key given key
      * @return associated value
      */
-    public String getKV(String key) {
+    public String getKV(String key) throws IOException {
         lock.lock();
         ++numOfReader;
         lock.unlock();
@@ -93,18 +98,18 @@ public class KVSimpleStorage {
         } catch (FileNotFoundException e) {
             // TODO: logging
             // invalid key
-            System.out.println(e.getMessage());
+            throw e;
         } catch (IOException e) {
             // TODO: logging
-            System.out.println(e.getMessage());
+            throw e;
+        } finally {
+            lock.lock();
+            --numOfReader;
+            if (numOfReader == 0) {
+                noReaderCondition.signal();
+            }
+            lock.unlock();
         }
-
-        lock.lock();
-        --numOfReader;
-        if (numOfReader == 0) {
-            noReaderCondition.signal();
-        }
-        lock.unlock();
 
         return val;
     }
@@ -124,7 +129,12 @@ public class KVSimpleStorage {
      * @return
      */
     public boolean inStorage(String key) {
-        return getKV(key) != null;
+        try {
+            return getKV(key) != null;
+        } catch (IOException e) {
+            return false;
+        }
+
     }
 
     /**
