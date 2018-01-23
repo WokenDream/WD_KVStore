@@ -110,6 +110,51 @@ public class KVSimpleStorage {
     }
 
     /**
+     * Check if the given key is in cache
+     * @param key key to check
+     * @return
+     */
+    public boolean inCache(String key) {
+        return false;
+    }
+
+    /**
+     * Check if the given key is on disk
+     * @param key key to check
+     * @return
+     */
+    public boolean inStorage(String key) {
+        return getKV(key) != null;
+    }
+
+    /**
+     * Clear storage
+     */
+    public void clearStorage() {
+        lock.lock();
+        File dir = new File(dbPath);
+        File[] files = dir.listFiles();
+        for (File file: files) {
+            if (!file.delete()) {
+                // TODO: logging
+                System.out.println("Failed to delete " + file);
+            }
+        }
+        if(!dir.delete()) {
+            // TODO: logging
+            System.out.println("Failed to delete " + dir);
+        }
+        lock.unlock();
+    }
+
+    /**
+     * Clear the content of cache
+     */
+    public void clearCache() {
+        return;
+    }
+
+    /**
      * Compute the file path given a key.
      * Assumptions:
      * 1. key != null

@@ -96,4 +96,43 @@ public class KVStorage extends KVSimpleStorage {
 
         return val;
     }
+
+    /**
+     * Check if the given key is stored in cache of this storage object
+     * @param key key to check
+     * @return
+     */
+    public boolean inCache(String key) {
+        lock.lock();
+        ++numOfReader;
+        lock.unlock();
+
+        boolean in = cache.inCache(key);
+
+        lock.unlock();
+        --numOfReader;
+        if (numOfReader == 0) {
+            noReaderCondition.signal();
+        }
+        lock.unlock();
+        return in;
+    }
+
+    /**
+     * Check if the given key is on disk
+     * @param key key to check
+     * @return
+     */
+    public boolean inStorage(String key) {
+        return super.getKV(key) != null;
+    }
+
+    /**
+     * Clear the cache associated with this storage object
+     */
+    public void clearCache() {
+        lock.lock();
+        cache.clearCache();
+        lock.unlock();
+    }
 }

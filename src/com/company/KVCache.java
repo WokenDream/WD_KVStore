@@ -107,6 +107,24 @@ public class KVCache {
     }
 
     /**
+     * Check if the pair with given key is in cache
+     * @param key key to check
+     * @return
+     */
+    public boolean inCache(String key) {
+        return cache.containsKey(key);
+    }
+
+    /**
+     * Remove everything in the cache
+     */
+    public void clearCache() {
+        list.clear();
+        cache.clear();
+        remainSize = cacheCapacity;
+    }
+
+    /**
      * Evict the cache so that the remaining size of the cache
      * is large enough to support the required size.
      * @param requiredSize size required
