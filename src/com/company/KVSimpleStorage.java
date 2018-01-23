@@ -48,9 +48,11 @@ public class KVSimpleStorage {
      * Create/update the given key-pair on disk.
      * @param key given key
      * @param value value associated with key
+     * @return true if this is an update; false if this is a create
      * @throws IOException
      */
-    public void putKV(String key, String value) throws IOException {
+    public boolean putKV(String key, String value) throws IOException {
+        boolean updated = true;
         lock.lock();
         try {
             while (numOfReader > 0) {
@@ -64,12 +66,14 @@ public class KVSimpleStorage {
             if (file.exists()) {
                 updatePair(file, key, value);
             } else {
+                updated = false;
                 createPair(file, key, value);
             }
         } catch (IOException ioe) {
             throw ioe;
         } finally {
             lock.unlock();
+            return updated;
         }
     }
 

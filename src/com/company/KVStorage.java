@@ -24,9 +24,11 @@ public class KVStorage extends KVSimpleStorage {
      * Create/update given key-value pair to disk and cache.
      * @param key given key
      * @param value value associated with key
+     * @return true if this is an update; false if this is a create
      * @throws IOException
      */
-    public void putKV(String key, String value) throws IOException {
+    public boolean putKV(String key, String value) throws IOException {
+        boolean updated = true;
         lock.lock();
         try {
             while (numOfReader > 0) {
@@ -42,12 +44,14 @@ public class KVStorage extends KVSimpleStorage {
             if (file.exists()) {
                 updatePair(file, key, value);
             } else {
+                updated = false;
                 createPair(file, key, value);
             }
         } catch (IOException e) {
             throw e;
         } finally {
             lock.unlock();
+            return updated;
         }
     }
 
