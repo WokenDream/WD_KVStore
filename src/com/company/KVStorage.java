@@ -10,12 +10,12 @@ public class KVStorage extends KVSimpleStorage {
 
     private KVCache cache;
 
-    public KVStorage(String dbPath, int cacheCapacity, CacheStrategy strategy) throws InvalidPathException, IOException {
+    public KVStorage(String dbPath, int cacheCapacity, IKVServer.CacheStrategy strategy) throws InvalidPathException, IOException {
         super(dbPath);
         cache = new KVCache(cacheCapacity, strategy);
     }
 
-    public KVStorage(int cacheCapacity, CacheStrategy strategy) throws IOException {
+    public KVStorage(int cacheCapacity, IKVServer.CacheStrategy strategy) throws IOException {
         super();
         cache = new KVCache(cacheCapacity, strategy);
     }
@@ -109,7 +109,7 @@ public class KVStorage extends KVSimpleStorage {
 
         boolean in = cache.inCache(key);
 
-        lock.unlock();
+        lock.lock();
         --numOfReader;
         if (numOfReader == 0) {
             noReaderCondition.signal();

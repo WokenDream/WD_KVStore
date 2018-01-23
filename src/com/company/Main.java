@@ -8,7 +8,7 @@ public class Main {
 	// write your code here
 
         try {
-            KVSimpleStorage db = new KVStorage("./newDB/", 400, CacheStrategy.LRU);
+            KVSimpleStorage db = new KVStorage("./newDB/", 400, IKVServer.CacheStrategy.LRU);
             for (int i = 0; i < 100; ++i) {
                 db.putKV("" + i, i + " abcd- e78hsds");
             }

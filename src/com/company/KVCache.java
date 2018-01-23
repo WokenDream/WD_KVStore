@@ -16,7 +16,7 @@ public class KVCache {
 
     private int remainSize;
     private int cacheCapacity;
-    private final CacheStrategy replacePolicy;
+    private final IKVServer.CacheStrategy replacePolicy;
     private HashMap<String, String> cache; // key is the "key", value is the "value"
 
     // maintain the order for cache replacement policy
@@ -25,13 +25,13 @@ public class KVCache {
     private LinkedList<CacheNode> list = new LinkedList<>();
 
 
-    public KVCache(int cacheCapacity, CacheStrategy replacePolicy) {
+    public KVCache(int cacheCapacity, IKVServer.CacheStrategy replacePolicy) {
         // cache setup
         if (cacheCapacity < 1) {
             cacheCapacity = 100;
         }
-        if (replacePolicy == CacheStrategy.None) {
-            replacePolicy = CacheStrategy.FIFO;
+        if (replacePolicy == IKVServer.CacheStrategy.None) {
+            replacePolicy = IKVServer.CacheStrategy.FIFO;
         }
         this.remainSize = cacheCapacity;
         this.cacheCapacity = cacheCapacity;
@@ -148,7 +148,7 @@ public class KVCache {
     private void insert(String key, String value) {
         CacheNode node = new CacheNode(key);
 
-        if (replacePolicy == CacheStrategy.LFU) {
+        if (replacePolicy == IKVServer.CacheStrategy.LFU) {
             list.addFirst(node);
         } else {
             list.addLast(node);
@@ -170,10 +170,10 @@ public class KVCache {
     private void update(String key, String value, int changeInSize) {
         CacheNode node = new CacheNode(key);
 
-        if (replacePolicy == CacheStrategy.LRU) {
+        if (replacePolicy == IKVServer.CacheStrategy.LRU) {
             list.remove(node);
             list.add(node);
-        } else if (replacePolicy == CacheStrategy.LFU) {
+        } else if (replacePolicy == IKVServer.CacheStrategy.LFU) {
             updateLFUList(node);
         }
         cache.put(key, value);

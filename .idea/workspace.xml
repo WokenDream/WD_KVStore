@@ -16,44 +16,22 @@
       <file leaf-file-name="Main.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/com/company/Main.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="438">
-              <caret line="32" column="0" lean-forward="false" selection-start-line="32" selection-start-column="0" selection-end-line="32" selection-end-column="0" />
+            <state relative-caret-position="105">
+              <caret line="7" column="27" lean-forward="false" selection-start-line="7" selection-start-column="27" selection-end-line="7" selection-end-column="27" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="KVStorage.java" pinned="false" current-in-tab="false">
+      <file leaf-file-name="KVStorage.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/com/company/KVStorage.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="363">
-              <caret line="136" column="5" lean-forward="false" selection-start-line="136" selection-start-column="5" selection-end-line="136" selection-end-column="5" />
+            <state relative-caret-position="210">
+              <caret line="14" column="53" lean-forward="false" selection-start-line="14" selection-start-column="53" selection-end-line="14" selection-end-column="53" />
               <folding>
                 <element signature="imports" expanded="true" />
-                <element signature="e#3357#3358#0" expanded="true" />
-                <element signature="e#3404#3405#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="KVServer.java" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/../m1/ECE419/m1/src/app_kvServer/KVServer.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-749">
-              <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-              <folding>
-                <element signature="imports" expanded="false" />
-                <element signature="e#2194#2195#0" expanded="false" />
-                <element signature="e#2229#2230#0" expanded="false" />
-                <element signature="e#3005#3006#0" expanded="false" />
-                <element signature="e#3055#3056#0" expanded="false" />
-                <element signature="e#3104#3105#0" expanded="false" />
-                <element signature="e#3173#3174#0" expanded="false" />
-                <element signature="e#3234#3235#0" expanded="false" />
-                <element signature="e#3270#3271#0" expanded="false" />
-                <element signature="e#3317#3318#0" expanded="false" />
-                <element signature="e#3354#3355#0" expanded="false" />
+                <element signature="e#3375#3376#0" expanded="true" />
+                <element signature="e#3422#3423#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -62,23 +40,23 @@
       <file leaf-file-name="KVCache.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/com/company/KVCache.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="152">
-              <caret line="120" column="16" lean-forward="false" selection-start-line="120" selection-start-column="16" selection-end-line="120" selection-end-column="16" />
+            <state relative-caret-position="2445">
+              <caret line="166" column="41" lean-forward="false" selection-start-line="166" selection-start-column="41" selection-end-line="166" selection-end-column="41" />
               <folding>
-                <element signature="e#2178#2179#0" expanded="true" />
-                <element signature="e#2215#2216#0" expanded="true" />
-                <element signature="e#3348#3349#0" expanded="true" />
-                <element signature="e#3393#3394#0" expanded="true" />
+                <element signature="e#2218#2219#0" expanded="true" />
+                <element signature="e#2255#2256#0" expanded="true" />
+                <element signature="e#3388#3389#0" expanded="true" />
+                <element signature="e#3433#3434#0" expanded="true" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="KVSimpleStorage.java" pinned="false" current-in-tab="true">
+      <file leaf-file-name="KVSimpleStorage.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/com/company/KVSimpleStorage.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="102">
-              <caret line="134" column="36" lean-forward="false" selection-start-line="134" selection-start-column="36" selection-end-line="134" selection-end-column="36" />
+            <state relative-caret-position="320">
+              <caret line="145" column="9" lean-forward="false" selection-start-line="145" selection-start-column="9" selection-end-line="145" selection-end-column="9" />
               <folding>
                 <element signature="imports" expanded="true" />
                 <element signature="e#3450#3451#0" expanded="true" />
@@ -96,7 +74,7 @@
         <entry file="file://$PROJECT_DIR$/src/com/company/Util.java">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="90">
-              <caret line="6" column="5" lean-forward="false" selection-start-line="6" selection-start-column="5" selection-end-line="6" selection-end-column="5" />
+              <caret line="6" column="4" lean-forward="false" selection-start-line="6" selection-start-column="4" selection-end-line="6" selection-end-column="4" />
               <folding />
             </state>
           </provider>
@@ -125,21 +103,22 @@
       <find>todo</find>
       <find>appendToFile</find>
       <find>createPair</find>
-      <find>remainsize</find>
       <find>dbpath</find>
+      <find>remainsize</find>
     </findStrings>
   </component>
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
         <option value="$PROJECT_DIR$/src/com/company/ReplacementPolicy.java" />
-        <option value="$PROJECT_DIR$/src/com/company/Util.java" />
-        <option value="$PROJECT_DIR$/../m1/ECE419/m1/src/app_kvServer/KVStorage.java" />
-        <option value="$PROJECT_DIR$/../m1/ECE419/m1/src/app_kvServer/KVSimpleStorage.java" />
-        <option value="$PROJECT_DIR$/src/com/company/Main.java" />
-        <option value="$PROJECT_DIR$/src/com/company/KVStorage.java" />
-        <option value="$PROJECT_DIR$/src/com/company/KVCache.java" />
         <option value="$PROJECT_DIR$/src/com/company/KVSimpleStorage.java" />
+        <option value="$PROJECT_DIR$/../m1/ECE419/m1/src/app_kvServer/KVCache.java" />
+        <option value="$PROJECT_DIR$/../m1/ECE419/m1/src/app_kvServer/KVSimpleStorage.java" />
+        <option value="$PROJECT_DIR$/../m1/ECE419/m1/src/app_kvServer/KVStorage.java" />
+        <option value="$PROJECT_DIR$/src/com/company/Util.java" />
+        <option value="$PROJECT_DIR$/src/com/company/Main.java" />
+        <option value="$PROJECT_DIR$/src/com/company/KVCache.java" />
+        <option value="$PROJECT_DIR$/src/com/company/KVStorage.java" />
       </list>
     </option>
   </component>
@@ -174,6 +153,28 @@
             <PATH_ELEMENT>
               <option name="myItemId" value="util" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="util" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="util" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="company" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="Util.java" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.ClassesTreeStructureProvider$PsiClassOwnerTreeNode" />
             </PATH_ELEMENT>
           </PATH>
           <PATH>
@@ -356,13 +357,6 @@
     <option name="FILTER_TARGETS" value="false" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0_121.jdk/Contents/Home/src.zip!/java/util/Queue.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="215">
-          <caret line="198" column="6" lean-forward="false" selection-start-line="198" selection-start-column="6" selection-end-line="198" selection-end-column="6" />
-        </state>
-      </provider>
-    </entry>
     <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0_121.jdk/Contents/Home/src.zip!/java/util/HashMap.java">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="304">
@@ -611,28 +605,6 @@
     <entry file="file://$PROJECT_DIR$/db/1567.txt" />
     <entry file="file://$PROJECT_DIR$/db/51.txt" />
     <entry file="file://$PROJECT_DIR$/newDB/1753.txt" />
-    <entry file="file://$PROJECT_DIR$/../m1/ECE419/m1/src/app_kvServer/KVStorage.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="21" lean-forward="false" selection-start-line="0" selection-start-column="21" selection-end-line="0" selection-end-column="21" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../m1/ECE419/m1/src/app_kvServer/KVSimpleStorage.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="21" lean-forward="false" selection-start-line="0" selection-start-column="21" selection-end-line="0" selection-end-column="21" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/com/company/Util.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="90">
-          <caret line="6" column="5" lean-forward="false" selection-start-line="6" selection-start-column="5" selection-end-line="6" selection-end-column="5" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/newDB/1567.txt">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
@@ -653,14 +625,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/com/company/Main.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="438">
-          <caret line="32" column="0" lean-forward="false" selection-start-line="32" selection-start-column="0" selection-end-line="32" selection-end-column="0" />
           <folding />
         </state>
       </provider>
@@ -693,31 +657,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/com/company/KVCache.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="152">
-          <caret line="120" column="16" lean-forward="false" selection-start-line="120" selection-start-column="16" selection-end-line="120" selection-end-column="16" />
-          <folding>
-            <element signature="e#2178#2179#0" expanded="true" />
-            <element signature="e#2215#2216#0" expanded="true" />
-            <element signature="e#3348#3349#0" expanded="true" />
-            <element signature="e#3393#3394#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/com/company/KVStorage.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="363">
-          <caret line="136" column="5" lean-forward="false" selection-start-line="136" selection-start-column="5" selection-end-line="136" selection-end-column="5" />
-          <folding>
-            <element signature="imports" expanded="true" />
-            <element signature="e#3357#3358#0" expanded="true" />
-            <element signature="e#3404#3405#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="jar:///Library/Java/JavaVirtualMachines/jdk1.8.0_121.jdk/Contents/Home/src.zip!/java/io/File.java">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="459">
@@ -726,10 +665,34 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/../m1/ECE419/m1/src/app_kvServer/KVCache.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="21" lean-forward="false" selection-start-line="0" selection-start-column="21" selection-end-line="0" selection-end-column="21" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../m1/ECE419/m1/src/app_kvServer/KVSimpleStorage.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="21" lean-forward="false" selection-start-line="0" selection-start-column="21" selection-end-line="0" selection-end-column="21" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../m1/ECE419/m1/src/app_kvServer/KVStorage.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="189">
+          <caret line="111" column="17" lean-forward="false" selection-start-line="111" selection-start-column="17" selection-end-line="111" selection-end-column="17" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/com/company/KVSimpleStorage.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="102">
-          <caret line="134" column="36" lean-forward="false" selection-start-line="134" selection-start-column="36" selection-end-line="134" selection-end-column="36" />
+        <state relative-caret-position="320">
+          <caret line="145" column="9" lean-forward="false" selection-start-line="145" selection-start-column="9" selection-end-line="145" selection-end-column="9" />
           <folding>
             <element signature="imports" expanded="true" />
             <element signature="e#3450#3451#0" expanded="true" />
@@ -738,6 +701,47 @@
             <element signature="e#3666#3667#0" expanded="true" />
             <element signature="e#4260#4261#0" expanded="true" />
             <element signature="e#4282#4283#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/com/company/Util.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="90">
+          <caret line="6" column="4" lean-forward="false" selection-start-line="6" selection-start-column="4" selection-end-line="6" selection-end-column="4" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/com/company/KVCache.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2445">
+          <caret line="166" column="41" lean-forward="false" selection-start-line="166" selection-start-column="41" selection-end-line="166" selection-end-column="41" />
+          <folding>
+            <element signature="e#2218#2219#0" expanded="true" />
+            <element signature="e#2255#2256#0" expanded="true" />
+            <element signature="e#3388#3389#0" expanded="true" />
+            <element signature="e#3433#3434#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/com/company/Main.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="105">
+          <caret line="7" column="27" lean-forward="false" selection-start-line="7" selection-start-column="27" selection-end-line="7" selection-end-column="27" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/com/company/KVStorage.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="210">
+          <caret line="14" column="53" lean-forward="false" selection-start-line="14" selection-start-column="53" selection-end-line="14" selection-end-column="53" />
+          <folding>
+            <element signature="imports" expanded="true" />
+            <element signature="e#3375#3376#0" expanded="true" />
+            <element signature="e#3422#3423#0" expanded="true" />
           </folding>
         </state>
       </provider>

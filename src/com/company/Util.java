@@ -3,10 +3,12 @@ package com.company;
 /**
  * Created by tianqiliu on 2018-01-16.
  */
-
-enum CacheStrategy {
-    None, FIFO, LRU, LFU
+interface IKVServer {
+    enum CacheStrategy {
+        None, FIFO, LRU, LFU
+    }
 }
+
 
 class CacheNode {
     String key;
