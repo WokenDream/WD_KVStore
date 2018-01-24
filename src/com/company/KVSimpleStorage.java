@@ -52,6 +52,9 @@ public class KVSimpleStorage {
      * @throws IOException
      */
     public boolean putKV(String key, String value) throws IOException {
+        if (key == null || key.isEmpty()) {
+            throw new IOException("invalid key " + key);
+        }
         boolean updated = true;
         lock.lock();
         try {
@@ -63,7 +66,9 @@ public class KVSimpleStorage {
                 }
             }
             File file = new File(getFilePath(key));
-            if (file.exists()) {
+            if (value == null) {
+                deleteFromStorage(key);
+            } else if (file.exists()) {
                 updatePair(file, key, value);
             } else {
                 updated = false;
@@ -81,8 +86,12 @@ public class KVSimpleStorage {
      * Get the value of the given key from disk.
      * @param key given key
      * @return associated value
+     * @throws IOException
      */
     public String getKV(String key) throws IOException {
+        if (key == null || key.isEmpty()) {
+            throw new IOException("invalid key " + key);
+        }
         lock.lock();
         ++numOfReader;
         lock.unlock();
@@ -99,10 +108,6 @@ public class KVSimpleStorage {
                 reader.readLine();
             }
             reader.close();
-        } catch (FileNotFoundException e) {
-            // TODO: logging
-            // invalid key
-            throw e;
         } catch (IOException e) {
             // TODO: logging
             throw e;
@@ -133,6 +138,9 @@ public class KVSimpleStorage {
      * @return
      */
     public boolean inStorage(String key) {
+        if (key == null || key.isEmpty()) {
+            return false;
+        }
         try {
             return getKV(key) != null;
         } catch (IOException e) {
@@ -166,6 +174,39 @@ public class KVSimpleStorage {
      */
     public void clearCache() {
         return;
+    }
+
+    /**
+     * Delete the record associated with the given key.
+     * Assumptions: key != null
+     * @param key key to delete
+     * @throws IOException
+     */
+    protected void deleteFromStorage(String key) throws IOException {
+        File file = new File(getFilePath(key));
+        if (file.exists()) {
+            File tempFile = new File(dbPath + "temp.txt");
+            BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile));
+            BufferedReader reader = new BufferedReader(new FileReader(file));
+
+            // read the old file into new file
+            // if the old file already contains the given key, omit it
+            int linesCopied = copyToFile(reader, writer, key);
+            writer.close();
+            reader.close();
+
+            if (!file.delete()) {
+                throw new IOException("could not delete the old file");
+            }
+            if (linesCopied == 0) {
+                if (!tempFile.delete()) {
+                    throw new IOException("could not delete the new file");
+                }
+            } else if (!tempFile.renameTo(file)) {
+                throw new IOException("could not rename file");
+            }
+
+        }
     }
 
     /**
@@ -217,24 +258,7 @@ public class KVSimpleStorage {
 
         // read the old file into new file
         // if the old file already contains the given key, omit it
-        String str;
-        while ((str = reader.readLine()) != null) {
-            if (str.substring(afterIndicator).equals(key)) {
-                reader.readLine(); // skip the old value
-                break;
-            }
-
-            writer.write(str);
-            writer.newLine();
-            writer.write(reader.readLine());
-            writer.newLine();
-        }
-        while ((str = reader.readLine()) != null) {
-            writer.write(str);
-            writer.newLine();
-            writer.write(reader.readLine());
-            writer.newLine();
-        }
+        copyToFile(reader, writer, key);
 
         writer.close();
         reader.close();
@@ -246,5 +270,38 @@ public class KVSimpleStorage {
             // TODO: logging
             throw new IOException("could not rename file");
         }
+    }
+
+    /**
+     * Copy the content from one file to another, omitting the data associated with the given key.
+     * @param reader reader for the origin file
+     * @param writer writer for the destination file
+     * @param keyToOmit key to be omitted
+     * @return number of lines copied
+     * @throws IOException
+     */
+    protected int copyToFile(BufferedReader reader, BufferedWriter writer, String keyToOmit) throws IOException {
+        int linesCopied = 0;
+        String str;
+        while ((str = reader.readLine()) != null) {
+            if (str.substring(afterIndicator).equals(keyToOmit)) {
+                reader.readLine(); // skip the old value
+                break;
+            }
+
+            ++linesCopied;
+            writer.write(str);
+            writer.newLine();
+            writer.write(reader.readLine());
+            writer.newLine();
+        }
+        while ((str = reader.readLine()) != null) {
+            ++linesCopied;
+            writer.write(str);
+            writer.newLine();
+            writer.write(reader.readLine());
+            writer.newLine();
+        }
+        return linesCopied;
     }
 }

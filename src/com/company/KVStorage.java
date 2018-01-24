@@ -28,6 +28,9 @@ public class KVStorage extends KVSimpleStorage {
      * @throws IOException
      */
     public boolean putKV(String key, String value) throws IOException {
+        if (key == null || key.isEmpty()) {
+            throw new IOException("invalid key " + key);
+        }
         boolean updated = true;
         lock.lock();
         try {
@@ -38,15 +41,20 @@ public class KVStorage extends KVSimpleStorage {
                     // TODO: log
                 }
             }
-            cache.putKV(key, value);
-
-            File file = new File(getFilePath(key));
-            if (file.exists()) {
-                updatePair(file, key, value);
+            if (value == null) {
+                deleteFromStorage(key);
             } else {
-                updated = false;
-                createPair(file, key, value);
+                cache.putKV(key, value);
+                File file = new File(getFilePath(key));
+                if (file.exists()) {
+                    updatePair(file, key, value);
+                } else {
+                    updated = false;
+                    createPair(file, key, value);
+                }
             }
+
+
         } catch (IOException e) {
             throw e;
         } finally {
@@ -59,8 +67,12 @@ public class KVStorage extends KVSimpleStorage {
      * Return the value of the associated key from cache/disk.
      * @param key given key
      * @return associated value
+     * @throws IOException
      */
     public String getKV(String key) throws IOException {
+        if (key == null || key.isEmpty()) {
+            throw new IOException("invalid key " + key);
+        }
         lock.lock();
         ++numOfReader;
         lock.unlock();
@@ -113,6 +125,9 @@ public class KVStorage extends KVSimpleStorage {
      * @return
      */
     public boolean inCache(String key) {
+        if (key == null || key.isEmpty()) {
+            return false;
+        }
         lock.lock();
         ++numOfReader;
         lock.unlock();
@@ -134,6 +149,9 @@ public class KVStorage extends KVSimpleStorage {
      * @return
      */
     public boolean inStorage(String key) {
+        if (key == null || key.isEmpty()) {
+            return false;
+        }
         try {
             return super.getKV(key) != null;
         } catch (IOException e) {
@@ -148,5 +166,10 @@ public class KVStorage extends KVSimpleStorage {
         lock.lock();
         cache.clearCache();
         lock.unlock();
+    }
+
+    protected void deleteFromStorage(String key) throws IOException {
+        cache.deleteFromCache(key);
+        super.deleteFromStorage(key);
     }
 }

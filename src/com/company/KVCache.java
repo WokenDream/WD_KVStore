@@ -43,6 +43,7 @@ public class KVCache {
      * Put the key-value pair into cache, eviction may take place
      * 1. If the key does not exist, create a new record
      * 2. otherwise update the existing record
+     * Assumptions: inputs are valid
      * @param key key of the data
      * @param value value of the data
      */
@@ -125,8 +126,28 @@ public class KVCache {
     }
 
     /**
+     * Remove the record from cache.
+     * Assumptions:
+     * key is not null
+     * @param key key to remove
+     */
+    public void deleteFromCache(String key) {
+        String val = cache.remove(key);
+        if (val != null) {
+            remainSize += val.length();
+        }
+        CacheNode node = new CacheNode(key);
+        int i = list.indexOf(node);
+        if (i < list.size()) {
+            list.remove(i);
+        }
+    }
+
+    /**
      * Evict the cache so that the remaining size of the cache
      * is large enough to support the required size.
+     * Assumptions:
+     * requiredSize < cacheCapacity
      * @param requiredSize size required
      */
     private void evict(int requiredSize) {
