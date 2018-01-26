@@ -14,7 +14,7 @@ public class Main {
             }
 
             for (int i = 0; i < 100; ++i) {
-                String val = db.getKV("" + i);
+                String val = db.getKV("" + i).getValue();
                 System.out.println(val);
             }
 
@@ -23,7 +23,7 @@ public class Main {
             }
 
             for (int i = 0; i < 100; ++i) {
-                String val = db.getKV("" + i);
+                String val = db.getKV("" + i).getValue();
                 System.out.println(val);
             }
 

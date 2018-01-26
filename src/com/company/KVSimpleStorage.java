@@ -98,24 +98,25 @@ public class KVSimpleStorage {
     /**
      * Get the value of the given key from disk.
      * @param key given key
-     * @return associated value, null if DNE
+     * @return associated result object
      * @throws IOException
      */
-    public String getKV(String key) throws IOException {
+    public KVStorageResult getKV(String key) throws IOException {
         if (key == null || key.isEmpty()) {
             throw new IOException("invalid key " + key);
         }
+        KVStorageResult result = new KVStorageResult(KVStorageResult.ResultType.GET_ERROR);
         lock.lock();
         ++numOfReader;
         lock.unlock();
 
-        String val = null;
         try {
             BufferedReader reader = new BufferedReader(new FileReader(getFilePath(key)));
             String str;
             while ((str = reader.readLine()) != null) {
                 if (str.substring(afterIndicator).equals(key)) {
-                    val = reader.readLine().substring(afterIndicator);
+                    result.setResult(KVStorageResult.ResultType.GET_SUCCESS);
+                    result.setValue(reader.readLine().substring(afterIndicator));
                     break;
                 }
                 reader.readLine();
@@ -133,7 +134,7 @@ public class KVSimpleStorage {
             lock.unlock();
         }
 
-        return val;
+        return result;
     }
 
     /**
@@ -155,7 +156,7 @@ public class KVSimpleStorage {
             return false;
         }
         try {
-            return getKV(key) != null;
+            return getKV(key).getValue() != null;
         } catch (IOException e) {
             return false;
         }

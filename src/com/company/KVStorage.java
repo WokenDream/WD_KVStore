@@ -77,13 +77,14 @@ public class KVStorage extends KVSimpleStorage {
     /**
      * Return the value of the associated key from cache/disk.
      * @param key given key
-     * @return associated value, null if DNE
+     * @return associated result object
      * @throws IOException
      */
-    public String getKV(String key) throws IOException {
+    public KVStorageResult getKV(String key) throws IOException {
         if (key == null || key.isEmpty()) {
             throw new IOException("invalid key " + key);
         }
+        KVStorageResult result = new KVStorageResult(KVStorageResult.ResultType.GET_ERROR);
         lock.lock();
         ++numOfReader;
         lock.unlock();
@@ -95,7 +96,8 @@ public class KVStorage extends KVSimpleStorage {
                 String str;
                 while ((str = reader.readLine()) != null) {
                     if (str.substring(afterIndicator).equals(key)) {
-                        val = reader.readLine().substring(afterIndicator);
+                        result.setResult(KVStorageResult.ResultType.GET_SUCCESS);
+                        result.setValue(reader.readLine().substring(afterIndicator));
                         break;
                     }
                     reader.readLine();
@@ -118,6 +120,8 @@ public class KVStorage extends KVSimpleStorage {
             }
 
         } else {
+            result.setResult(KVStorageResult.ResultType.GET_SUCCESS);
+            result.setValue(val);
             lock.lock();
             cache.updateOrderList(key);
             --numOfReader;
@@ -127,7 +131,7 @@ public class KVStorage extends KVSimpleStorage {
             lock.unlock();
         }
 
-        return val;
+        return result;
     }
 
     /**
@@ -160,14 +164,7 @@ public class KVStorage extends KVSimpleStorage {
      * @return
      */
     public boolean inStorage(String key) {
-        if (key == null || key.isEmpty()) {
-            return false;
-        }
-        try {
-            return super.getKV(key) != null;
-        } catch (IOException e) {
-            return false;
-        }
+        return inCache(key) || super.inStorage(key);
     }
 
     /**
