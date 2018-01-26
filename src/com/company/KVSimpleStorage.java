@@ -52,8 +52,8 @@ public class KVSimpleStorage {
      * @throws IOException
      */
     public KVStorageResult putKV(String key, String value) throws IOException {
-        if (key == null || key.isEmpty()) {
-            throw new IOException("invalid key " + key);
+        if (key == null || key.isEmpty() || value == null || value.isEmpty()) {
+            throw new IOException("invalid argumentsK key - " + key + " value - " + value);
         }
         KVStorageResult result = new KVStorageResult();
         lock.lock();
@@ -66,7 +66,7 @@ public class KVSimpleStorage {
                 }
             }
             File file = new File(getFilePath(key));
-            if (value == null) {
+            if (value.equals("null")) {
                 if (deleteFromStorage(key)) {
                     result.setResult(KVStorageResult.ResultType.DELETE_SUCCESS);
                 } else {
