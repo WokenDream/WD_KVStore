@@ -48,14 +48,14 @@ public class KVSimpleStorage {
      * Create/update the given key-pair on disk.
      * @param key given key
      * @param value value associated with key
-     * @return true if this is an update; false if this is a create
+     * @return status of result
      * @throws IOException
      */
-    public boolean putKV(String key, String value) throws IOException {
+    public KVStorageResult putKV(String key, String value) throws IOException {
         if (key == null || key.isEmpty()) {
             throw new IOException("invalid key " + key);
         }
-        boolean updated = true;
+        KVStorageResult result = new KVStorageResult();
         lock.lock();
         try {
             while (numOfReader > 0) {
@@ -67,25 +67,38 @@ public class KVSimpleStorage {
             }
             File file = new File(getFilePath(key));
             if (value == null) {
-                deleteFromStorage(key);
+                if (deleteFromStorage(key)) {
+                    result.setResult(KVStorageResult.ResultType.DELETE_SUCCESS);
+                } else {
+                    result.setResult(KVStorageResult.ResultType.DELETE_ERROR);
+                }
             } else if (file.exists()) {
-                updatePair(file, key, value);
+                if (updatePair(file, key, value)) {
+                    result.setResult(KVStorageResult.ResultType.PUT_UPDATE_SUCCESS);
+                } else {
+                    result.setResult(KVStorageResult.ResultType.PUT_UPDATE_ERROR);
+                }
             } else {
-                updated = false;
-                createPair(file, key, value);
+                try {
+                    createPair(file, key, value);
+                    result.setResult(KVStorageResult.ResultType.PUT_SUCCESS);
+                } catch (IOException ioe) {
+                    result.setResult(KVStorageResult.ResultType.PUT_ERROR);
+                }
+
             }
         } catch (IOException ioe) {
             throw ioe;
         } finally {
             lock.unlock();
-            return updated;
         }
+        return result;
     }
 
     /**
      * Get the value of the given key from disk.
      * @param key given key
-     * @return associated value
+     * @return associated value, null if DNE
      * @throws IOException
      */
     public String getKV(String key) throws IOException {
@@ -180,11 +193,14 @@ public class KVSimpleStorage {
      * Delete the record associated with the given key.
      * Assumptions: key != null
      * @param key key to delete
+     * @return true if delete is successful, false otherwise
      * @throws IOException
      */
-    protected void deleteFromStorage(String key) throws IOException {
+    protected boolean deleteFromStorage(String key) throws IOException {
+        boolean deleted = false;
         File file = new File(getFilePath(key));
         if (file.exists()) {
+            deleted = true;
             File tempFile = new File(dbPath + "temp.txt");
             BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile));
             BufferedReader reader = new BufferedReader(new FileReader(file));
@@ -196,17 +212,18 @@ public class KVSimpleStorage {
             reader.close();
 
             if (!file.delete()) {
-                throw new IOException("could not delete the old file");
+                deleted = false;
             }
             if (linesCopied == 0) {
                 if (!tempFile.delete()) {
-                    throw new IOException("could not delete the new file");
+                    deleted = false;
                 }
             } else if (!tempFile.renameTo(file)) {
-                throw new IOException("could not rename file");
+                deleted = false;
             }
 
         }
+        return deleted;
     }
 
     /**
@@ -224,6 +241,13 @@ public class KVSimpleStorage {
         return sb.toString();
     }
 
+    /**
+     * Persist key-value pair to disk by writing them to the given file.
+     * @param file given file
+     * @param key given key
+     * @param value given value
+     * @throws IOException
+     */
     protected void createPair(File file, String key, String value) throws IOException {
         BufferedWriter writer = new BufferedWriter(new FileWriter(file));
         writer.write(keyIndicator + key);
@@ -243,9 +267,11 @@ public class KVSimpleStorage {
      * @param file given file
      * @param key given key
      * @param value new value associated with the key
+     * @return true if the update is successful, false otherwise
      * @throws IOException
      */
-    protected void updatePair(File file, String key, String value) throws IOException {
+    protected boolean updatePair(File file, String key, String value) throws IOException {
+        boolean updated = true;
         File tempFile = new File(dbPath + "temp.txt");
         BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile));
         BufferedReader reader = new BufferedReader(new FileReader(file));
@@ -263,13 +289,12 @@ public class KVSimpleStorage {
         writer.close();
         reader.close();
         if (!file.delete()) {
-            // TODO: logging
-            throw new IOException("could not delete the old file");
+            updated = false;
         }
         if (!tempFile.renameTo(file)) {
-            // TODO: logging
-            throw new IOException("could not rename file");
+            updated = false;
         }
+        return updated;
     }
 
     /**

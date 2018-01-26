@@ -27,3 +27,48 @@ class CacheNode {
         return (obj instanceof CacheNode) && ((CacheNode)obj).key.equals(this.key);
     }
 }
+
+class KVStorageResult {
+
+    public enum ResultType {
+        PUT_SUCCESS,
+        PUT_ERROR,
+        PUT_UPDATE_SUCCESS,
+        PUT_UPDATE_ERROR,
+        DELETE_SUCCESS,
+        DELETE_ERROR,
+        GET_SUCCESS,
+        GET_ERROR
+    }
+
+    private ResultType result;
+    private String value;
+
+    public KVStorageResult() {
+        result = null;
+        value = null;
+    }
+
+    public KVStorageResult (ResultType result) {
+        this.result = result;
+    }
+
+    public KVStorageResult (ResultType result, String value) {
+        this.result = result;
+        this.value = value;
+    }
+
+    public void setResult(ResultType result) {
+        this.result = result;
+    }
+
+    public ResultType getResult() {
+        return this.result;
+    }
+    public void setValue(String value) {
+        this.value = value;
+    }
+    public String getValue() {
+        return this.value;
+    }
+}

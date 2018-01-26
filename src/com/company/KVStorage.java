@@ -24,14 +24,14 @@ public class KVStorage extends KVSimpleStorage {
      * Create/update given key-value pair to disk and cache.
      * @param key given key
      * @param value value associated with key
-     * @return true if this is an update; false if this is a create
+     * @return status of result
      * @throws IOException
      */
-    public boolean putKV(String key, String value) throws IOException {
+    public KVStorageResult putKV(String key, String value) throws IOException {
         if (key == null || key.isEmpty()) {
             throw new IOException("invalid key " + key);
         }
-        boolean updated = true;
+        KVStorageResult result = new KVStorageResult();
         lock.lock();
         try {
             while (numOfReader > 0) {
@@ -42,31 +42,42 @@ public class KVStorage extends KVSimpleStorage {
                 }
             }
             if (value == null) {
-                deleteFromStorage(key);
+                if (deleteFromStorage(key)) {
+                    result.setResult(KVStorageResult.ResultType.DELETE_SUCCESS);
+                } else {
+                    result.setResult(KVStorageResult.ResultType.DELETE_ERROR);
+                }
             } else {
                 cache.putKV(key, value);
                 File file = new File(getFilePath(key));
                 if (file.exists()) {
-                    updatePair(file, key, value);
+                    if (updatePair(file, key, value)) {
+                        result.setResult(KVStorageResult.ResultType.PUT_UPDATE_SUCCESS);
+                    } else {
+                        result.setResult(KVStorageResult.ResultType.PUT_UPDATE_ERROR);
+                    }
                 } else {
-                    updated = false;
-                    createPair(file, key, value);
+                    try {
+                        createPair(file, key, value);
+                        result.setResult(KVStorageResult.ResultType.PUT_SUCCESS);
+                    } catch (IOException ioe) {
+                        result.setResult(KVStorageResult.ResultType.PUT_ERROR);
+                    }
+
                 }
             }
-
-
         } catch (IOException e) {
             throw e;
         } finally {
             lock.unlock();
-            return updated;
         }
+        return result;
     }
 
     /**
      * Return the value of the associated key from cache/disk.
      * @param key given key
-     * @return associated value
+     * @return associated value, null if DNE
      * @throws IOException
      */
     public String getKV(String key) throws IOException {
@@ -168,8 +179,14 @@ public class KVStorage extends KVSimpleStorage {
         lock.unlock();
     }
 
-    protected void deleteFromStorage(String key) throws IOException {
+    /**
+     * Delete the key-value pair from cache and disk.
+     * @param key key to delete
+     * @return
+     * @throws IOException
+     */
+    protected boolean deleteFromStorage(String key) throws IOException {
         cache.deleteFromCache(key);
-        super.deleteFromStorage(key);
+        return super.deleteFromStorage(key);
     }
 }

@@ -135,10 +135,8 @@ public class KVCache {
         String val = cache.remove(key);
         if (val != null) {
             remainSize += val.length();
-        }
-        CacheNode node = new CacheNode(key);
-        int i = list.indexOf(node);
-        if (i < list.size()) {
+            CacheNode node = new CacheNode(key);
+            int i = list.indexOf(node);
             list.remove(i);
         }
     }
