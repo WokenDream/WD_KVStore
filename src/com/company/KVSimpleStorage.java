@@ -124,7 +124,7 @@ public class KVSimpleStorage {
             reader.close();
         } catch (IOException e) {
             // TODO: logging
-            throw e;
+            System.out.println(e.getLocalizedMessage());
         } finally {
             lock.lock();
             --numOfReader;
@@ -170,16 +170,19 @@ public class KVSimpleStorage {
         lock.lock();
         File dir = new File(dbPath);
         File[] files = dir.listFiles();
-        for (File file: files) {
-            if (!file.delete()) {
+        if (files != null) {
+            for (File file: files) {
+                if (!file.delete()) {
+                    // TODO: logging
+                    System.out.println("Failed to delete " + file);
+                }
+            }
+            if(!dir.delete()) {
                 // TODO: logging
-                System.out.println("Failed to delete " + file);
+                System.out.println("Failed to delete " + dir);
             }
         }
-        if(!dir.delete()) {
-            // TODO: logging
-            System.out.println("Failed to delete " + dir);
-        }
+
         lock.unlock();
     }
 

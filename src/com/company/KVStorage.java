@@ -108,7 +108,7 @@ public class KVStorage extends KVSimpleStorage {
             } catch (IOException e) {
                 // TODO: logging
                 // invalid key
-                throw e;
+                System.out.println(e.getLocalizedMessage());
             } finally {
                 lock.lock();
                 if (val != null) {
@@ -175,6 +175,30 @@ public class KVStorage extends KVSimpleStorage {
     public void clearCache() {
         lock.lock();
         cache.clearCache();
+        lock.unlock();
+    }
+
+    /**
+     * Clear storage
+     */
+    public void clearStorage() {
+        lock.lock();
+        cache.clearCache();
+        File dir = new File(dbPath);
+        File[] files = dir.listFiles();
+        if (files != null) {
+            for (File file: files) {
+                if (!file.delete()) {
+                    // TODO: logging
+                    System.out.println("Failed to delete " + file);
+                }
+            }
+            if(!dir.delete()) {
+                // TODO: logging
+                System.out.println("Failed to delete " + dir);
+            }
+        }
+
         lock.unlock();
     }
 
