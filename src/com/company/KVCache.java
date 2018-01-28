@@ -27,6 +27,7 @@ public class KVCache {
 
     public KVCache(int cacheCapacity, IKVServer.CacheStrategy replacePolicy) {
         // cache setup
+        cacheCapacity >>= 1;
         if (cacheCapacity < 1) {
             cacheCapacity = 100;
         }

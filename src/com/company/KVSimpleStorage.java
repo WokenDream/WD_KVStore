@@ -53,7 +53,7 @@ public class KVSimpleStorage {
      */
     public KVStorageResult putKV(String key, String value) throws IOException {
         if (key == null || key.isEmpty() || value == null || value.isEmpty()) {
-            throw new IOException("invalid argumentsK key - " + key + " value - " + value);
+            throw new IOException("invalid arguments key - " + key + " value - " + value);
         }
         KVStorageResult result = new KVStorageResult();
         lock.lock();
