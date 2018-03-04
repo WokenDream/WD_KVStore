@@ -13,8 +13,8 @@ import org.apache.zookeeper.*;
 public class ECSClient implements IECSClient {
     private ZooKeeper zk;
     private CountDownLatch countDownLatch = new CountDownLatch(1);// may be unnecessary
-    private HashMap<String, ECSNode> nodeHashMap = new HashMap<>();
-
+    private HashMap<String, ECSNode> nodeHashMap = new HashMap<>(); // (znodePath, ecsnode)
+    private HashMap<String, Process> processHashMap = new HashMap<>(); // (znodePath, processes)
     private String ipAddress = "localhost:3000";
     private int port = 3000;
     private int timeOut = 3000;
@@ -23,10 +23,15 @@ public class ECSClient implements IECSClient {
         this.ipAddress = ipAddress;
         this.port = port;
         this.timeOut = timeOut;
+        connectToZookeeper();
+    }
+
+    public ECSClient() throws IOException {
+        connectToZookeeper();
     }
 
     //------------------custom implementation---------------//
-    private void init() throws IOException {
+    private void connectToZookeeper() throws IOException {
         zk = new ZooKeeper("host", timeOut, new Watcher() {
             @Override
             public void process(WatchedEvent event) {
@@ -43,6 +48,13 @@ public class ECSClient implements IECSClient {
             System.out.println("failed to  initialize ECS Client, exiting");
             System.exit(-1);
         }
+    }
+
+    private void startNodeServer(String znodePath, IECSNode node) throws IOException {
+        // TODO: complete path and argument of server
+        String cmd = "ssh -n " + ipAddress + " nohup java -jar <path>/ms2-server.jar " + port + "blabla";
+        Process process = Runtime.getRuntime().exec(cmd);
+        processHashMap.put(znodePath, process);
     }
 
     //---------------IECSClient Implemntation---------------//
@@ -77,29 +89,30 @@ public class ECSClient implements IECSClient {
      * Create a new KVServer with the specified cache size and replacement strategy and add it to the storage service at an arbitrary position.
      * @return  name of new server
      */
+    // TODO: logging in exceptions
     public IECSNode addNode(String cacheStrategy, int cacheSize) {
-        // TODO: logging in exceptions
         ECSNode node = new ECSNode(ipAddress, port, cacheSize, cacheStrategy);
         try {
             byte[] bytes = node.toBytes();
-            String nodePath = zk.create(node.getNodeHash(), bytes, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
-            nodeHashMap.put(nodePath, node);
-            // TODO: start the server associated with node
+            String znodePath = zk.create(node.getNodeHash(), bytes, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+            nodeHashMap.put(znodePath, node);
+            startNodeServer(znodePath, node);
             // TODO: moving data of affected servers (read requests can be served)
             // TODO: update metedata of all servers
         } catch (IOException e) {
-            // node cannot be converted to byte array
-            System.out.println("failed to convert node into byte array");
+            System.out.println(e.getLocalizedMessage());
             return null;
         } catch (KeeperException.InvalidACLException e) {
             System.out.println("the ACL is invalid, null, or empty");
+            System.out.println(e.getLocalizedMessage());
             return null;
         } catch (KeeperException e) {
             System.out.println("the zookeeper server returns a non-zero error code");
+            System.out.println(e.getLocalizedMessage());
             return null;
         } catch (InterruptedException e) {
-            System.out.println(e.getLocalizedMessage());
             System.out.println("exiting client due to interrupted exception");
+            System.out.println(e.getLocalizedMessage());
             System.exit(-1);
         }
 
