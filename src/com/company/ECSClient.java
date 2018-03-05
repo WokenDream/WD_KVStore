@@ -1,8 +1,6 @@
 package com.company;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Collection;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.zookeeper.*;
@@ -10,6 +8,26 @@ import org.apache.zookeeper.*;
 /**
  * Created by tianqiliu on 2018-03-03.
  */
+
+class ECSNodes {
+    private HashMap<String, Boolean> allNodes = new HashMap<>(); // (node's ip + port, launched or not)
+    private int count = 0;
+
+    public void setInUse(String address, Boolean used) {
+        allNodes.put(address, used);
+        count = used ? count - 1 : count + 1;
+    }
+
+    public Set<Map.Entry<String ,Boolean>> getEntrySet() {
+        return allNodes.entrySet();
+    }
+
+    public int getNumOfAvailableNodes() {
+        return count;
+    }
+
+}
+
 public class ECSClient implements IECSClient {
     private ZooKeeper zk;
     private CountDownLatch countDownLatch = new CountDownLatch(1);// may be unnecessary
@@ -18,6 +36,9 @@ public class ECSClient implements IECSClient {
     private String ipAddress = "localhost:3000";
     private int port = 3000;
     private int timeOut = 3000;
+
+//    private HashMap<String, Boolean> allNodes = new HashMap<>(); // (node's ip + port, launched or not)
+    private ECSNodes allNodes = new ECSNodes();
 
     public ECSClient(String ipAddress, int port, int timeOut) throws IOException {
         this.ipAddress = ipAddress;
@@ -57,6 +78,25 @@ public class ECSClient implements IECSClient {
         processHashMap.put(znodePath, process);
     }
 
+    /**
+     * find an available node and mark the found node as in use (false)
+     * @param cacheStrategy
+     * @param cacheSize
+     * @return
+     */
+    private ECSNode getAvailableNode(String cacheStrategy, int cacheSize) {
+        for (Map.Entry<String, Boolean> entry: allNodes.getEntrySet()) {
+            if (entry.getValue() == true) {
+                entry.setValue(false);
+                String[] temps = entry.getKey().split(":");
+                String nodeIP = temps[0];
+                int nodePort = Integer.parseInt(temps[1]);
+                return new ECSNode(nodeIP, nodePort, cacheSize, cacheStrategy);
+            }
+        }
+        return null;
+    }
+
     //---------------IECSClient Implemntation---------------//
     /**
      * Starts the storage service by calling start() on all KVServer instances that participate in the service.\
@@ -91,29 +131,32 @@ public class ECSClient implements IECSClient {
      */
     // TODO: logging in exceptions
     public IECSNode addNode(String cacheStrategy, int cacheSize) {
-        ECSNode node = new ECSNode(ipAddress, port, cacheSize, cacheStrategy);
+        ECSNode node = getAvailableNode(cacheStrategy, cacheSize);
+        if (node == null) {
+            return null;
+        }
         try {
             byte[] bytes = node.toBytes();
             String znodePath = zk.create(node.getNodeHash(), bytes, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
             nodeHashMap.put(znodePath, node);
             startNodeServer(znodePath, node);
             // TODO: moving data of affected servers (read requests can be served)
-            // TODO: update metedata of all servers
-        } catch (IOException e) {
+            // TODO: update metadata of all servers
+        } catch (Exception e) {
+            if (e instanceof KeeperException.InvalidACLException) {
+                System.out.println("the ACL is invalid, null, or empty");
+            } else if (e instanceof KeeperException) {
+                System.out.println("the zookeeper server returns a non-zero error code");
+            } else if (e instanceof InterruptedException) {
+                System.out.println("exiting client due to interrupted exception");
+                System.out.println(e.getLocalizedMessage());
+                // TODO: may be need to do some clean up e.g. zookeeper
+                System.exit(-1);
+            }
+
+            allNodes.setInUse("", false);
             System.out.println(e.getLocalizedMessage());
             return null;
-        } catch (KeeperException.InvalidACLException e) {
-            System.out.println("the ACL is invalid, null, or empty");
-            System.out.println(e.getLocalizedMessage());
-            return null;
-        } catch (KeeperException e) {
-            System.out.println("the zookeeper server returns a non-zero error code");
-            System.out.println(e.getLocalizedMessage());
-            return null;
-        } catch (InterruptedException e) {
-            System.out.println("exiting client due to interrupted exception");
-            System.out.println(e.getLocalizedMessage());
-            System.exit(-1);
         }
 
         return node;
@@ -127,7 +170,24 @@ public class ECSClient implements IECSClient {
      * @return  set of strings containing the names of the nodes
      */
     public Collection<IECSNode> addNodes(int count, String cacheStrategy, int cacheSize) {
-        return null;
+        // TODO: need to call setupNodes first
+        if (allNodes.getNumOfAvailableNodes() < count) {
+            System.out.println("not enough free nodes available");
+            return null;
+        }
+        ArrayList<IECSNode> nodes = new ArrayList<>();
+        IECSNode node;
+        for (int i = 0; i < count; ++i) {
+            node = addNode(cacheStrategy, cacheSize);
+            if (node == null) {
+                // TODO: not sure if reverse what have been done
+                return null;
+            }
+            nodes.add(node);
+        }
+
+        // call awaitNodes
+        return nodes;
     }
 
     /**
