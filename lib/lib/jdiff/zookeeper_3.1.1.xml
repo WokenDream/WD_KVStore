@@ -1282,35 +1282,35 @@
       static="true" final="false" visibility="public"
       deprecated="not deprecated">
       <param name="host" type="java.lang.String"/>
-      <param name="port" type="int"/>
+      <param name="zkPort" type="int"/>
     </method>
     <method name="dump"
       abstract="false" native="false" synchronized="false"
       static="true" final="false" visibility="public"
       deprecated="not deprecated">
       <param name="host" type="java.lang.String"/>
-      <param name="port" type="int"/>
+      <param name="zkPort" type="int"/>
     </method>
     <method name="stat"
       abstract="false" native="false" synchronized="false"
       static="true" final="false" visibility="public"
       deprecated="not deprecated">
       <param name="host" type="java.lang.String"/>
-      <param name="port" type="int"/>
+      <param name="zkPort" type="int"/>
     </method>
     <method name="kill"
       abstract="false" native="false" synchronized="false"
       static="true" final="false" visibility="public"
       deprecated="not deprecated">
       <param name="host" type="java.lang.String"/>
-      <param name="port" type="int"/>
+      <param name="zkPort" type="int"/>
     </method>
     <method name="setTraceMask"
       abstract="false" native="false" synchronized="false"
       static="true" final="false" visibility="public"
       deprecated="not deprecated">
       <param name="host" type="java.lang.String"/>
-      <param name="port" type="int"/>
+      <param name="zkPort" type="int"/>
       <param name="traceMaskStr" type="java.lang.String"/>
     </method>
     <method name="getTraceMask"
@@ -1318,7 +1318,7 @@
       static="true" final="false" visibility="public"
       deprecated="not deprecated">
       <param name="host" type="java.lang.String"/>
-      <param name="port" type="int"/>
+      <param name="zkPort" type="int"/>
     </method>
     <method name="main"
       abstract="false" native="false" synchronized="false"
@@ -1879,7 +1879,7 @@
       <exception name="IOException" type="java.io.IOException"/>
       <doc>
       <![CDATA[To create a client(ZooKeeper) object, the application needs to pass a
- string containing a comma separated list of host:port pairs, each 
+ string containing a comma separated list of host:zkPort pairs, each
  corresponding to a ZooKeeper server.
  <p>
  The client object will pick an arbitrary server and try to connect to it.
@@ -1887,7 +1887,7 @@
  established, or all the servers have been tried.
 
  @param host
-            comma separated host:port pairs, each corresponding to a zk
+            comma separated host:zkPort pairs, each corresponding to a zk
             server. e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002"
  @param sessionTimeout
             session timeout in milliseconds
@@ -1904,7 +1904,7 @@
       <exception name="IOException" type="java.io.IOException"/>
       <doc>
       <![CDATA[To create a client(ZooKeeper) object, the application needs to pass a
- string containing a comma separated list of host:port pairs, each
+ string containing a comma separated list of host:zkPort pairs, each
  corresponding to a ZooKeeper server.
  <p>
  The client object will pick an arbitrary server and try to connect to it.
@@ -1918,7 +1918,7 @@
  parameters.
 
  @param host
-            comma separated host:port pairs, each corresponding to a zk
+            comma separated host:zkPort pairs, each corresponding to a zk
             server. e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002"
  @param sessionTimeout
             session timeout in milliseconds

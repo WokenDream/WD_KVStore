@@ -2329,35 +2329,35 @@
       static="true" final="false" visibility="public"
       deprecated="not deprecated">
       <param name="host" type="java.lang.String"/>
-      <param name="port" type="int"/>
+      <param name="zkPort" type="int"/>
     </method>
     <method name="dump"
       abstract="false" native="false" synchronized="false"
       static="true" final="false" visibility="public"
       deprecated="not deprecated">
       <param name="host" type="java.lang.String"/>
-      <param name="port" type="int"/>
+      <param name="zkPort" type="int"/>
     </method>
     <method name="stat"
       abstract="false" native="false" synchronized="false"
       static="true" final="false" visibility="public"
       deprecated="not deprecated">
       <param name="host" type="java.lang.String"/>
-      <param name="port" type="int"/>
+      <param name="zkPort" type="int"/>
     </method>
     <method name="kill"
       abstract="false" native="false" synchronized="false"
       static="true" final="false" visibility="public"
       deprecated="not deprecated">
       <param name="host" type="java.lang.String"/>
-      <param name="port" type="int"/>
+      <param name="zkPort" type="int"/>
     </method>
     <method name="setTraceMask"
       abstract="false" native="false" synchronized="false"
       static="true" final="false" visibility="public"
       deprecated="not deprecated">
       <param name="host" type="java.lang.String"/>
-      <param name="port" type="int"/>
+      <param name="zkPort" type="int"/>
       <param name="traceMaskStr" type="java.lang.String"/>
     </method>
     <method name="getTraceMask"
@@ -2365,7 +2365,7 @@
       static="true" final="false" visibility="public"
       deprecated="not deprecated">
       <param name="host" type="java.lang.String"/>
-      <param name="port" type="int"/>
+      <param name="zkPort" type="int"/>
     </method>
     <method name="main"
       abstract="false" native="false" synchronized="false"
@@ -3476,7 +3476,7 @@
       <exception name="IOException" type="java.io.IOException"/>
       <doc>
       <![CDATA[To create a ZooKeeper client object, the application needs to pass a
- connection string containing a comma separated list of host:port pairs,
+ connection string containing a comma separated list of host:zkPort pairs,
  each corresponding to a ZooKeeper server.
  <p>
  Session establishment is asynchronous. This constructor will initiate
@@ -3498,7 +3498,7 @@
  all paths relative to this root (similar to the unix chroot command).
 
  @param connectString
-            comma separated host:port pairs, each corresponding to a zk
+            comma separated host:zkPort pairs, each corresponding to a zk
             server. e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002" If
             the optional chroot suffix is used the example would look
             like: "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002/app/a"
@@ -3524,7 +3524,7 @@
       <exception name="IOException" type="java.io.IOException"/>
       <doc>
       <![CDATA[To create a ZooKeeper client object, the application needs to pass a
- connection string containing a comma separated list of host:port pairs,
+ connection string containing a comma separated list of host:zkPort pairs,
  each corresponding to a ZooKeeper server.
  <p>
  Session establishment is asynchronous. This constructor will initiate
@@ -3546,7 +3546,7 @@
  all paths relative to this root (similar to the unix chroot command).
 
  @param connectString
-            comma separated host:port pairs, each corresponding to a zk
+            comma separated host:zkPort pairs, each corresponding to a zk
             server. e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002" If
             the optional chroot suffix is used the example would look
             like: "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002/app/a"
@@ -3580,7 +3580,7 @@
       <exception name="IOException" type="java.io.IOException"/>
       <doc>
       <![CDATA[To create a ZooKeeper client object, the application needs to pass a
- connection string containing a comma separated list of host:port pairs,
+ connection string containing a comma separated list of host:zkPort pairs,
  each corresponding to a ZooKeeper server.
  <p>
  Session establishment is asynchronous. This constructor will initiate
@@ -3608,7 +3608,7 @@
  parameters.
 
  @param connectString
-            comma separated host:port pairs, each corresponding to a zk
+            comma separated host:zkPort pairs, each corresponding to a zk
             server. e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002"
             If the optional chroot suffix is used the example would look
             like: "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002/app/a"
@@ -3637,7 +3637,7 @@
       <exception name="IOException" type="java.io.IOException"/>
       <doc>
       <![CDATA[To create a ZooKeeper client object, the application needs to pass a
- connection string containing a comma separated list of host:port pairs,
+ connection string containing a comma separated list of host:zkPort pairs,
  each corresponding to a ZooKeeper server.
  <p>
  Session establishment is asynchronous. This constructor will initiate
@@ -3665,7 +3665,7 @@
  parameters.
 
  @param connectString
-            comma separated host:port pairs, each corresponding to a zk
+            comma separated host:zkPort pairs, each corresponding to a zk
             server. e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002"
             If the optional chroot suffix is used the example would look
             like: "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002/app/a"

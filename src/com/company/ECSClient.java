@@ -33,17 +33,16 @@ public class ECSClient implements IECSClient {
     private CountDownLatch countDownLatch = new CountDownLatch(1);// may be unnecessary
     private HashMap<String, ECSNode> nodeHashMap = new HashMap<>(); // (znodePath, ecsnode)
     private HashMap<String, Process> processHashMap = new HashMap<>(); // (znodePath, processes)
-    private String ipAddress = "localhost:3000";
-    private int port = 3000;
-    private int timeOut = 3000;
+    private String zkIpAddress = "localhost";
+    private int zkPort = 3000;
+    private int sessionTimeout = 3000;
 
-//    private HashMap<String, Boolean> allNodes = new HashMap<>(); // (node's ip + port, launched or not)
     private ECSNodes allNodes = new ECSNodes();
 
-    public ECSClient(String ipAddress, int port, int timeOut) throws IOException {
-        this.ipAddress = ipAddress;
-        this.port = port;
-        this.timeOut = timeOut;
+    public ECSClient(String zkIpAddress, int zkPort, int sessionTimeout) throws IOException {
+        this.zkIpAddress = zkIpAddress;
+        this.zkPort = zkPort;
+        this.sessionTimeout = sessionTimeout;
         connectToZookeeper();
     }
 
@@ -52,8 +51,13 @@ public class ECSClient implements IECSClient {
     }
 
     //------------------custom implementation---------------//
+
+    /**
+     * Connect to zookeeper; block until connection is made
+     * @throws IOException
+     */
     private void connectToZookeeper() throws IOException {
-        zk = new ZooKeeper("host", timeOut, new Watcher() {
+        zk = new ZooKeeper(zkIpAddress + ":" + zkPort, sessionTimeout, new Watcher() {
             @Override
             public void process(WatchedEvent event) {
                 if (event.getState() == Event.KeeperState.SyncConnected) {
@@ -71,20 +75,26 @@ public class ECSClient implements IECSClient {
         }
     }
 
+    /**
+     * Run a KVServer process
+     * @param znodePath path given by zookeeper
+     * @param node ECS node which contains metadata for the KVServer
+     * @throws IOException
+     */
     private void startNodeServer(String znodePath, IECSNode node) throws IOException {
         // TODO: complete path and argument of server
-        String cmd = "ssh -n " + ipAddress + " nohup java -jar <path>/ms2-server.jar " + port + "blabla";
+        String cmd = "ssh -n " + node.getNodeHost() + " nohup java -jar <path>/ms2-server.jar " + node.getNodePort() + "blabla";
         Process process = Runtime.getRuntime().exec(cmd);
         processHashMap.put(znodePath, process);
     }
 
     /**
-     * find an available node and mark the found node as in use (false)
+     * find an available node and mark the found node as not available (false)
      * @param cacheStrategy
      * @param cacheSize
      * @return
      */
-    private ECSNode getAvailableNode(String cacheStrategy, int cacheSize) {
+    private ECSNode popAvailableNode(String cacheStrategy, int cacheSize) {
         for (Map.Entry<String, Boolean> entry: allNodes.getEntrySet()) {
             if (entry.getValue() == true) {
                 entry.setValue(false);
@@ -95,6 +105,48 @@ public class ECSClient implements IECSClient {
             }
         }
         return null;
+    }
+
+    /**
+     * Create a znode
+     * @param cacheStrategy
+     * @param cacheSize
+     * @return znode path to the znode created
+     */
+    private String setupNode(String cacheStrategy, int cacheSize) {
+        ECSNode node = popAvailableNode(cacheStrategy, cacheSize);
+        String znodePath = null;
+        if (node == null) {
+            return null;
+        }
+        try {
+            byte[] bytes = node.toBytes();
+            znodePath = zk.create(node.getNodeHash(), bytes, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+            nodeHashMap.put(znodePath, node);
+        } catch (Exception e) {
+            if (e instanceof KeeperException.InvalidACLException) {
+                System.out.println("the ACL is invalid, null, or empty");
+            } else if (e instanceof KeeperException) {
+                System.out.println("the zookeeper server returns a non-zero error code");
+            } else if (e instanceof InterruptedException) {
+                System.out.println("exiting client due to interrupted exception");
+                System.out.println(e.getLocalizedMessage());
+                // TODO: may be need to do some clean up e.g. zookeeper
+                System.exit(-1);
+            }
+
+            allNodes.setInUse("", false);
+            System.out.println(e.getLocalizedMessage());
+            return null;
+        }
+
+        return znodePath;
+
+    }
+
+    private boolean awaitNode(int timeout) {
+        // TODO: not sure what to do
+        return false;
     }
 
     //---------------IECSClient Implemntation---------------//
@@ -131,34 +183,22 @@ public class ECSClient implements IECSClient {
      */
     // TODO: logging in exceptions
     public IECSNode addNode(String cacheStrategy, int cacheSize) {
-        ECSNode node = getAvailableNode(cacheStrategy, cacheSize);
-        if (node == null) {
+        String znodePath = setupNode(cacheStrategy, cacheSize);
+        if (znodePath == null) {
             return null;
         }
+        ECSNode node = nodeHashMap.get(znodePath);
         try {
-            byte[] bytes = node.toBytes();
-            String znodePath = zk.create(node.getNodeHash(), bytes, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
-            nodeHashMap.put(znodePath, node);
             startNodeServer(znodePath, node);
-            // TODO: moving data of affected servers (read requests can be served)
-            // TODO: update metadata of all servers
-        } catch (Exception e) {
-            if (e instanceof KeeperException.InvalidACLException) {
-                System.out.println("the ACL is invalid, null, or empty");
-            } else if (e instanceof KeeperException) {
-                System.out.println("the zookeeper server returns a non-zero error code");
-            } else if (e instanceof InterruptedException) {
-                System.out.println("exiting client due to interrupted exception");
-                System.out.println(e.getLocalizedMessage());
-                // TODO: may be need to do some clean up e.g. zookeeper
-                System.exit(-1);
-            }
-
-            allNodes.setInUse("", false);
+        } catch (IOException e) {
+            System.out.println("failed to launch node: " + node.getNodeName());
             System.out.println(e.getLocalizedMessage());
-            return null;
         }
 
+        if (!awaitNode(sessionTimeout)) {
+            // clean up: delete node and destroy process
+            return null;
+        }
         return node;
     }
 
@@ -170,6 +210,13 @@ public class ECSClient implements IECSClient {
      * @return  set of strings containing the names of the nodes
      */
     public Collection<IECSNode> addNodes(int count, String cacheStrategy, int cacheSize) {
+//        Collection<IECSNode> nodes = setupNodes(count, cacheStrategy, cacheSize);
+//        if (nodes == null) {
+//            return null;
+//        }
+//        for (IECSNode node: nodes) {
+//
+//        }
         // TODO: need to call setupNodes first
         if (allNodes.getNumOfAvailableNodes() < count) {
             System.out.println("not enough free nodes available");
@@ -195,7 +242,17 @@ public class ECSClient implements IECSClient {
      * @return  array of strings, containing unique names of servers
      */
     public Collection<IECSNode> setupNodes(int count, String cacheStrategy, int cacheSize) {
-        return null;
+        if (allNodes.getNumOfAvailableNodes() < count) {
+            System.out.println("not enough free nodes available");
+            return null;
+        }
+        ArrayList<IECSNode> nodes = new ArrayList<>();
+        for (int i = 0; i < count; ++i) {
+            String znothPath = setupNode(cacheStrategy, cacheSize);
+            nodes.add(nodeHashMap.get(znothPath));
+        }
+        return nodes;
+
     }
 
     /**
@@ -205,7 +262,13 @@ public class ECSClient implements IECSClient {
      * @return  true if all nodes reported successfully, false otherwise
      */
     public boolean awaitNodes(int count, int timeout) throws Exception {
-        return false;
+        // TODO: not sure what to do
+        for (int i = 0; i < count; ++i) {
+            if (!awaitNode(timeout)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
