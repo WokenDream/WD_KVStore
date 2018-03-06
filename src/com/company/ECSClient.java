@@ -10,20 +10,28 @@ import org.apache.zookeeper.*;
  */
 
 class ECSNodes {
-    private HashMap<String, Boolean> allNodes = new HashMap<>(); // (node's ip + port, launched or not)
+    private HashMap<String, IECSNode> allNodes = new HashMap<>(); // (node's ip + port, znode: null if not created)
     private int count = 0;
 
-    public void setInUse(String address, Boolean used) {
-        allNodes.put(address, used);
-        count = used ? count - 1 : count + 1;
+    public void setNode(String nodeName, IECSNode node) {
+        allNodes.put(nodeName, node);
+        count = node == null ? count - 1 : count + 1;
     }
 
-    public Set<Map.Entry<String ,Boolean>> getEntrySet() {
+    public IECSNode getNode(String nodeName) {
+        return allNodes.get(nodeName);
+    }
+
+    public Set<Map.Entry<String ,IECSNode>> getEntrySet() {
         return allNodes.entrySet();
     }
 
     public int getNumOfAvailableNodes() {
         return count;
+    }
+
+    public Map<String, IECSNode> getNodeMap() {
+        return allNodes;
     }
 
 }
@@ -95,13 +103,14 @@ public class ECSClient implements IECSClient {
      * @return
      */
     private ECSNode popAvailableNode(String cacheStrategy, int cacheSize) {
-        for (Map.Entry<String, Boolean> entry: allNodes.getEntrySet()) {
-            if (entry.getValue() == true) {
-                entry.setValue(false);
+        for (Map.Entry<String, IECSNode> entry: allNodes.getEntrySet()) {
+            if (entry.getValue() == null) {
                 String[] temps = entry.getKey().split(":");
                 String nodeIP = temps[0];
                 int nodePort = Integer.parseInt(temps[1]);
-                return new ECSNode(nodeIP, nodePort, cacheSize, cacheStrategy);
+                ECSNode node =  new ECSNode(nodeIP, nodePort, cacheSize, cacheStrategy);
+                entry.setValue(node);
+                return node;
             }
         }
         return null;
@@ -115,7 +124,7 @@ public class ECSClient implements IECSClient {
      */
     private String setupNode(String cacheStrategy, int cacheSize) {
         ECSNode node = popAvailableNode(cacheStrategy, cacheSize);
-        String znodePath = null;
+        String znodePath;
         if (node == null) {
             return null;
         }
@@ -135,7 +144,8 @@ public class ECSClient implements IECSClient {
                 System.exit(-1);
             }
 
-            allNodes.setInUse("", false);
+            // TODO: may need more cleanup
+            allNodes.setNode(node.getNodeName(), null);
             System.out.println(e.getLocalizedMessage());
             return null;
         }
@@ -145,7 +155,8 @@ public class ECSClient implements IECSClient {
     }
 
     private boolean awaitNode(int timeout) {
-        // TODO: not sure what to do
+        // TODO: not sure what to do; may call get after create znode and set a watcher
+        // TODO: KVServer change znode state when connected
         return false;
     }
 
@@ -156,6 +167,7 @@ public class ECSClient implements IECSClient {
      * @return  true on success, false on failure
      */
     public boolean start() throws Exception {
+        // TODO: add some state variable to ECSnode to indicate "start"
         return false;
     }
 
@@ -165,6 +177,7 @@ public class ECSClient implements IECSClient {
      * @return  true on success, false on failure
      */
     public boolean stop() throws Exception {
+        // TODO: add some state variable to ECSnode to indicate "stop"
         return false;
     }
 
@@ -174,6 +187,14 @@ public class ECSClient implements IECSClient {
      * @return  true on success, false on failure
      */
     public boolean shutdown() throws Exception {
+        stop();
+        for (Process proc: processHashMap.values()) {
+            if (proc.isAlive()) {
+//                proc.destroy();
+                proc.destroyForcibly();
+            }
+
+        }
         return false;
     }
 
@@ -284,14 +305,14 @@ public class ECSClient implements IECSClient {
      * Get a map of all nodes
      */
     public Map<String, IECSNode> getNodes() {
-        return null;
+        return allNodes.getNodeMap();
     }
 
     /**
      * Get the specific node responsible for the given key
      */
     public IECSNode getNodeByKey(String Key) {
-        return null;
+        return allNodes.getNode(Key);
     }
 
     //--------------end of IECSClient implementation------------//
