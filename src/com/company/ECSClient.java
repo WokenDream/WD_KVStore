@@ -1,5 +1,5 @@
 package com.company;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
@@ -9,29 +9,68 @@ import org.apache.zookeeper.*;
  * Created by tianqiliu on 2018-03-03.
  */
 
-class ECSNodes {
-    private HashMap<String, IECSNode> allNodes = new HashMap<>(); // (node's ip + port, znode: null if not created)
-    private int count = 0;
+/**
+ * This is the only class allowed to directly modify the data member of ECSNode
+ */
+class ECSNodeManager {
+    private HashMap<String, ECSNode> allNodes = new HashMap<>(); // (nodeName, node)
+    private int numOfFreeNodes = 0;
 
-    public void setNode(String nodeName, IECSNode node) {
-        allNodes.put(nodeName, node);
-        count = node == null ? count - 1 : count + 1;
+    public ECSNodeManager(String configPath) throws IOException {
+        numOfFreeNodes = 0;
+        try {
+            BufferedReader reader = new BufferedReader(new FileReader(configPath));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] tokens = line.split(" ");
+                String nodeName = tokens[0];
+                String ip = tokens[1];
+                int port = Integer.parseInt(tokens[2]);
+                ECSNode node = new ECSNode(nodeName, ip, port);
+                allNodes.put(nodeName, node);
+                ++numOfFreeNodes;
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println("config file not found: " + configPath);
+            System.out.println(e.getLocalizedMessage());
+        } catch (IOException e) {
+            System.out.println("config file corrupted");
+            System.out.println(e.getLocalizedMessage());
+        }
+    }
+
+    public void setNodeInUse(ECSNode node, boolean inUse) {
+        if (node.inUse != inUse) {
+            node.inUse = inUse;
+            numOfFreeNodes = inUse ? numOfFreeNodes - 1 : numOfFreeNodes + 1;
+        } else {
+            System.out.println("dude, this node is already in use: " + node.getNodeName());
+        }
+
     }
 
     public IECSNode getNode(String nodeName) {
         return allNodes.get(nodeName);
     }
 
-    public Set<Map.Entry<String ,IECSNode>> getEntrySet() {
+    public Collection<ECSNode> getNodes() {
+        return allNodes.values();
+    }
+
+    public Set<Map.Entry<String ,ECSNode>> getEntrySet() {
         return allNodes.entrySet();
     }
 
     public int getNumOfAvailableNodes() {
-        return count;
+        return numOfFreeNodes;
     }
 
     public Map<String, IECSNode> getNodeMap() {
-        return allNodes;
+        HashMap<String, IECSNode> nodes = new HashMap<>();
+        for (Map.Entry<String, ECSNode> entry: allNodes.entrySet()) {
+            nodes.put(entry.getKey(), entry.getValue());
+        }
+        return nodes;
     }
 
 }
@@ -39,22 +78,19 @@ class ECSNodes {
 public class ECSClient implements IECSClient {
     private ZooKeeper zk;
     private CountDownLatch countDownLatch = new CountDownLatch(1);// may be unnecessary
-    private HashMap<String, ECSNode> nodeHashMap = new HashMap<>(); // (znodePath, ecsnode)
+    private HashMap<String, ECSNode> znodeHashMap = new HashMap<>(); // (znodePath, ecsnode)
     private HashMap<String, Process> processHashMap = new HashMap<>(); // (znodePath, processes)
     private String zkIpAddress = "localhost";
     private int zkPort = 3000;
     private int sessionTimeout = 3000;
 
-    private ECSNodes allNodes = new ECSNodes();
+    private ECSNodeManager allNodes;
 
     public ECSClient(String zkIpAddress, int zkPort, int sessionTimeout) throws IOException {
+        allNodes = new ECSNodeManager("somepath");
         this.zkIpAddress = zkIpAddress;
         this.zkPort = zkPort;
         this.sessionTimeout = sessionTimeout;
-        connectToZookeeper();
-    }
-
-    public ECSClient() throws IOException {
         connectToZookeeper();
     }
 
@@ -103,13 +139,10 @@ public class ECSClient implements IECSClient {
      * @return
      */
     private ECSNode popAvailableNode(String cacheStrategy, int cacheSize) {
-        for (Map.Entry<String, IECSNode> entry: allNodes.getEntrySet()) {
-            if (entry.getValue() == null) {
-                String[] temps = entry.getKey().split(":");
-                String nodeIP = temps[0];
-                int nodePort = Integer.parseInt(temps[1]);
-                ECSNode node =  new ECSNode(nodeIP, nodePort, cacheSize, cacheStrategy);
-                entry.setValue(node);
+        for (ECSNode node: allNodes.getNodes()) {
+            if (!node.inUse) {
+                node.setCache(cacheStrategy, cacheSize);
+                allNodes.setNodeInUse(node, true);
                 return node;
             }
         }
@@ -124,14 +157,14 @@ public class ECSClient implements IECSClient {
      */
     private String setupNode(String cacheStrategy, int cacheSize) {
         ECSNode node = popAvailableNode(cacheStrategy, cacheSize);
-        String znodePath;
+        String znodePath = null;
         if (node == null) {
             return null;
         }
         try {
             byte[] bytes = node.toBytes();
             znodePath = zk.create(node.getNodeHash(), bytes, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
-            nodeHashMap.put(znodePath, node);
+            znodeHashMap.put(znodePath, node);
         } catch (Exception e) {
             if (e instanceof KeeperException.InvalidACLException) {
                 System.out.println("the ACL is invalid, null, or empty");
@@ -145,7 +178,8 @@ public class ECSClient implements IECSClient {
             }
 
             // TODO: may need more cleanup
-            allNodes.setNode(node.getNodeName(), null);
+            allNodes.setNodeInUse(node, false);
+            znodeHashMap.remove(znodePath);
             System.out.println(e.getLocalizedMessage());
             return null;
         }
@@ -195,6 +229,11 @@ public class ECSClient implements IECSClient {
             }
 
         }
+        for (ECSNode node: znodeHashMap.values()) {
+            allNodes.setNodeInUse(node, false);
+        }
+        znodeHashMap.clear();
+
         return false;
     }
 
@@ -208,12 +247,14 @@ public class ECSClient implements IECSClient {
         if (znodePath == null) {
             return null;
         }
-        ECSNode node = nodeHashMap.get(znodePath);
+        ECSNode node = znodeHashMap.get(znodePath);
         try {
             startNodeServer(znodePath, node);
         } catch (IOException e) {
             System.out.println("failed to launch node: " + node.getNodeName());
             System.out.println(e.getLocalizedMessage());
+            znodeHashMap.remove(znodePath);
+            allNodes.setNodeInUse(node, false);
         }
 
         if (!awaitNode(sessionTimeout)) {
@@ -238,7 +279,6 @@ public class ECSClient implements IECSClient {
 //        for (IECSNode node: nodes) {
 //
 //        }
-        // TODO: need to call setupNodes first
         if (allNodes.getNumOfAvailableNodes() < count) {
             System.out.println("not enough free nodes available");
             return null;
@@ -255,6 +295,12 @@ public class ECSClient implements IECSClient {
         }
 
         // call awaitNodes
+        try {
+            awaitNodes(count, 3000);
+        } catch (Exception e) {
+            System.out.println("Server connection timed out");
+            System.out.println(e.getLocalizedMessage());
+        }
         return nodes;
     }
 
@@ -270,7 +316,7 @@ public class ECSClient implements IECSClient {
         ArrayList<IECSNode> nodes = new ArrayList<>();
         for (int i = 0; i < count; ++i) {
             String znothPath = setupNode(cacheStrategy, cacheSize);
-            nodes.add(nodeHashMap.get(znothPath));
+            nodes.add(znodeHashMap.get(znothPath));
         }
         return nodes;
 

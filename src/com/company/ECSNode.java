@@ -17,17 +17,14 @@ public class ECSNode implements IECSNode, Serializable {
     private int port;
     private String[] hashRange; // (predecessor, me]
 
-//    private Process process;
-//    private boolean instantiated = false;
     private int cacheSize;
     private String cacheStrategy;
 
-    public ECSNode(String name, String ipAddress, int port, int cacheSize, String cacheStrategy) {
-        initNode(name, ipAddress, port, cacheSize, cacheStrategy);
-    }
+    // stated vars
+    public boolean inUse = false;
 
-    public ECSNode(String ipAddress, int port, int cacheSize, String cacheStrategy) {
-        initNode(ipAddress + ":" + port, ipAddress, port, cacheSize, cacheStrategy);
+    public ECSNode(String name, String ipAddress, int port) {
+        initNode(name, ipAddress, port);
     }
 
     //----------------IECSNode implementation----------------//
@@ -48,12 +45,10 @@ public class ECSNode implements IECSNode, Serializable {
     }
 
     //------------------Custom Methods------------------//
-    private void initNode(String name, String ipAddress, int port, int cacheSize, String cacheStrategy) {
+    private void initNode(String name, String ipAddress, int port) {
         this.name = name;
         this.ipAddress = ipAddress;
         this.port = port;
-        this.cacheSize = cacheSize;
-        this.cacheStrategy = cacheStrategy;
         hashRange = new String[2];
         try {
             MessageDigest messageDigest = MessageDigest.getInstance(HASH_ALGO);
@@ -64,28 +59,18 @@ public class ECSNode implements IECSNode, Serializable {
         }
     }
 
-//    public void startServer(int cacheSize, String cacheStrategy) throws IOException {
-//        if (instantiated) {
-//            throw new IOException("Server is already instantiated");
-//        }
-//        if (cacheSize < 1) {
-//            throw new IllegalArgumentException("Cache size " + cacheSize + " is invalid");
-//        }
-//        if (cacheStrategy == null || cacheStrategy.equals("")) {
-//            throw new IllegalArgumentException("invalid cache eviction policy");
-//        }
-//
-//        cacheStrategy = cacheStrategy.toUpperCase();
-//        if (!(cacheStrategy.equals("FIFO") || cacheStrategy.equals("LRU") || cacheStrategy.equals("LFU") || cacheStrategy.equals("None"))) {
-//            throw new IllegalArgumentException("invalid cache eviction policy " + cacheStrategy);
-//        }
-//
-//        this.cacheStrategy = cacheStrategy;
-//        //TODO: complete path and argument of server
-//        String cmd = "ssh -n " + ipAddress + " nohup java -jar <path>/ms2-server.jar " + port + "blabla";
-//        process = Runtime.getRuntime().exec(cmd);
-//        instantiated = true;
-//    }
+    public void setCacheSize(int size) {
+        this.cacheSize = size;
+    }
+
+    public void setCacheStrategy(String strategy) {
+        this.cacheStrategy = strategy;
+    }
+
+    public void setCache(String cacheStrategy, int cacheSize) {
+        this.cacheStrategy = cacheStrategy;
+        this.cacheSize = cacheSize;
+    }
 
     public String getNodeHash() {
         return hashRange[1];
