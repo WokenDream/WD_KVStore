@@ -4,6 +4,7 @@ import javax.xml.bind.DatatypeConverter;
 import java.io.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.TreeMap;
 
 /**
  * Created by tianqiliu on 2018-02-24.
@@ -12,16 +13,25 @@ public class ECSNode implements IECSNode, Serializable {
 
     private static String HASH_ALGO = "MD5";
 
+    public static enum Action {
+        Start, Stop, Kill
+    }
+
     private String name;
     private String ipAddress;
     private int port;
     private String[] hashRange; // (predecessor, me]
+    private TreeMap<String, String> hashRing = new TreeMap<>(); // (hash, nodeName: may need to change)
 
     private int cacheSize;
     private String cacheStrategy;
 
     // stated vars
     public boolean inUse = false;
+    public boolean started = false;
+    public boolean stopped = true;
+    public boolean killed = false;
+    public Action todo;
 
     public ECSNode(String name, String ipAddress, int port) {
         initNode(name, ipAddress, port);

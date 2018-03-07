@@ -9,19 +9,27 @@ public class Main {
 
         try {
             KVSimpleStorage db = new KVStorage("./newDB/", 400, IKVServer.CacheStrategy.LRU);
-            String key = "updateTestValue";
-            String val = "initial";
-            KVStorageResult result = db.putKV(key, val);
-            System.out.println(result.getResult());
-            result = db.getKV(key);
-            System.out.println(result.getValue());
-            val = "updated";
-            result = db.putKV(key, val);
-            System.out.println(result.getResult());
-            result = db.getKV(key);
-            System.out.println(result.getValue());
-            result = db.putKV(key, "null");
-            System.out.println(result.getResult());
+            db.putKV("k1", "k2");
+            System.out.println(db.inStorage("k1"));
+            System.out.println(db.inCache("k1"));
+            System.out.println(db.getKV("k1").getValue());
+            db.clearStorage();
+            System.out.println(db.inStorage("k1"));
+            System.out.println(db.inCache("k1"));
+            System.out.println(db.getKV("k1").getValue());
+//            String key = "updateTestValue";
+//            String val = "initial";
+//            KVStorageResult result = db.putKV(key, val);
+//            System.out.println(result.getResult());
+//            result = db.getKV(key);
+//            System.out.println(result.getValue());
+//            val = "updated";
+//            result = db.putKV(key, val);
+//            System.out.println(result.getResult());
+//            result = db.getKV(key);
+//            System.out.println(result.getValue());
+//            result = db.putKV(key, "null");
+//            System.out.println(result.getResult());
 
 //            for (int i = 0; i < 100; ++i) {
 //                db.putKV("" + i, i + " abcd- e78hsds");
@@ -40,7 +48,12 @@ public class Main {
 //                String val = db.getKV("" + i).getValue();
 //                System.out.println(val);
 //            }
+//
+//            db.clearStorage();
+//            KVStorageResult result = db.getKV("0");
+//            System.out.println(result.getValue());
 
+            ECSClient ecsClient = new ECSClient("localhost", 3000, 3000);
         } catch (IOException e) {
             System.out.println(e.getLocalizedMessage());
         }

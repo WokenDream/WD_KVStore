@@ -4,6 +4,7 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.zookeeper.*;
+import org.apache.zookeeper.data.Stat;
 
 /**
  * Created by tianqiliu on 2018-03-03.
@@ -194,6 +195,11 @@ public class ECSClient implements IECSClient {
         return false;
     }
 
+    private boolean removeNode(String nodeName) {
+        // TODO: does it kill the server?
+        return false;
+    }
+
     //---------------IECSClient Implemntation---------------//
     /**
      * Starts the storage service by calling start() on all KVServer instances that participate in the service.\
@@ -201,8 +207,18 @@ public class ECSClient implements IECSClient {
      * @return  true on success, false on failure
      */
     public boolean start() throws Exception {
-        // TODO: add some state variable to ECSnode to indicate "start"
-        return false;
+        // TODO: initialize hash ring
+        for (Map.Entry<String, ECSNode> entry: znodeHashMap.entrySet()) {
+            String znodePath = entry.getKey();
+            ECSNode node = entry.getValue();
+            Stat stat = zk.exists(znodePath, true);
+            if (stat == null) {
+                throw new Exception("node " + node.getNodeName() + " does not exist at path: " + znodePath);
+            }
+            node.todo = ECSNode.Action.Start;
+            zk.setData(znodePath, node.toBytes(), stat.getVersion());
+        }
+        return true;
     }
 
     /**
@@ -211,7 +227,16 @@ public class ECSClient implements IECSClient {
      * @return  true on success, false on failure
      */
     public boolean stop() throws Exception {
-        // TODO: add some state variable to ECSnode to indicate "stop"
+        for (Map.Entry<String, ECSNode> entry: znodeHashMap.entrySet()) {
+            String znodePath = entry.getKey();
+            ECSNode node = entry.getValue();
+            Stat stat = zk.exists(znodePath, true);
+            if (stat == null) {
+                throw new Exception("node " + node.getNodeName() + " does not exist at path: " + znodePath);
+            }
+            node.todo = ECSNode.Action.Stop;
+            zk.setData(znodePath, node.toBytes(), stat.getVersion());
+        }
         return false;
     }
 
@@ -221,14 +246,25 @@ public class ECSClient implements IECSClient {
      * @return  true on success, false on failure
      */
     public boolean shutdown() throws Exception {
+        // TODO: should shutdown remove znode?
         stop();
-        for (Process proc: processHashMap.values()) {
-            if (proc.isAlive()) {
-//                proc.destroy();
-                proc.destroyForcibly();
+        for (Map.Entry<String, ECSNode> entry: znodeHashMap.entrySet()) {
+            String znodePath = entry.getKey();
+            ECSNode node = entry.getValue();
+            Stat stat = zk.exists(znodePath, true);
+            if (stat == null) {
+                throw new Exception("node " + node.getNodeName() + " does not exist at path: " + znodePath);
             }
-
+            node.todo = ECSNode.Action.Kill;
+            zk.setData(znodePath, node.toBytes(), stat.getVersion());
         }
+//        for (Process proc: processHashMap.values()) {
+//            if (proc.isAlive()) {
+////                proc.destroy();
+//                proc.destroyForcibly();
+//            }
+//
+//        }
         for (ECSNode node: znodeHashMap.values()) {
             allNodes.setNodeInUse(node, false);
         }
@@ -344,7 +380,14 @@ public class ECSClient implements IECSClient {
      * @return  true on success, false otherwise
      */
     public boolean removeNodes(Collection<String> nodeNames) {
-        return false;
+        // TODO: see removeNode
+        boolean allRemoved = true;
+        for (String nodeName: nodeNames) {
+            if (!removeNode(nodeName)) {
+                allRemoved = false;
+            }
+        }
+        return allRemoved;
     }
 
     /**
