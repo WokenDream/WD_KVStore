@@ -21,7 +21,7 @@ public class ECSNode implements IECSNode, Serializable {
     private String ipAddress;
     private int port;
     private String[] hashRange; // (predecessor, me]
-    private TreeMap<String, String> hashRing = new TreeMap<>(); // (hash, nodeName: may need to change)
+    public TreeMap<String, String> hashRing = new TreeMap<>(); // (hash, nodeName: may need to change)
 
     private int cacheSize;
     private String cacheStrategy;

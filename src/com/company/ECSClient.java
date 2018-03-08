@@ -86,6 +86,7 @@ public class ECSClient implements IECSClient {
     private ZooKeeper zk;
     private CountDownLatch countDownLatch = new CountDownLatch(1);// may be unnecessary
     private HashMap<String, ECSNode> znodeHashMap = new HashMap<>(); // (znodePath i.e. nodeName, ecsnode)
+    private TreeMap<String, String> hashRing = new TreeMap<>(); // (hash, znodepath)
     private HashMap<String, Process> processHashMap = new HashMap<>(); // (znodePath i.e. nodeName, processes)
     private String zkIpAddress = "localhost";
     private int zkPort = 3000;
@@ -262,6 +263,36 @@ public class ECSClient implements IECSClient {
 //
 //    }
 
+    private boolean updateHashRingOfEveryZnode(ECSNode newNode) {
+        // update hashring of every one
+        boolean success = true;
+        hashRing.put(newNode.getNodeHash(), newNode.getNodeName());
+        for (Map.Entry<String, ECSNode> entry: znodeHashMap.entrySet()) {
+            String znodePath = entry.getKey();
+            ECSNode tempNode = entry.getValue();
+            tempNode.hashRing = hashRing;
+            String predecessor = hashRing.lowerKey(newNode.getNodeHash());
+            if (predecessor == null) {
+                predecessor = hashRing.lastKey();
+            }
+            tempNode.setNodepredecessor(predecessor);
+            try {
+                Stat stat = zk.exists(tempNode.getNodeName(), true);
+                zk.setData(tempNode.getNodeName(), tempNode.toBytes(), stat.getVersion());
+            } catch (IOException e) {
+                System.out.println(e.getLocalizedMessage());
+                success = false;
+            } catch (KeeperException e) {
+                System.out.println(e.getLocalizedMessage());
+                success = false;
+            } catch (InterruptedException e) {
+                System.out.println("ECS Client existing due to interrupted exception");
+                System.exit(-1);
+            }
+        }
+        return success;
+    }
+
     //---------------IECSClient Implemntation---------------//
     /**
      * Starts the storage service by calling start() on all KVServer instances that participate in the service.\
@@ -343,6 +374,9 @@ public class ECSClient implements IECSClient {
     public IECSNode addNode(String cacheStrategy, int cacheSize) {
         ECSNode node = setupNode(cacheStrategy, cacheSize);
         if (node == null) {
+            return null;
+        }
+        if(!updateHashRingOfEveryZnode(node)) {
             return null;
         }
         try {
