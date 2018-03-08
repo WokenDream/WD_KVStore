@@ -24,7 +24,7 @@ class ECSNodeManager {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] tokens = line.split(" ");
-                String nodeName = tokens[0];
+                String nodeName = tokens[0].charAt(0) == '/' ? tokens[0] : "/" + tokens[0];
                 String ip = tokens[1];
                 int port = Integer.parseInt(tokens[2]);
                 ECSNode node = new ECSNode(nodeName, ip, port);
@@ -87,8 +87,8 @@ public class ECSClient implements IECSClient {
 
     private ECSNodeManager allNodes;
 
-    public ECSClient(String zkIpAddress, int zkPort, int sessionTimeout) throws IOException {
-        allNodes = new ECSNodeManager("somepath");
+    public ECSClient(String configPath, String zkIpAddress, int zkPort, int sessionTimeout) throws IOException {
+        allNodes = new ECSNodeManager(configPath);
         this.zkIpAddress = zkIpAddress;
         this.zkPort = zkPort;
         this.sessionTimeout = sessionTimeout;
@@ -128,9 +128,9 @@ public class ECSClient implements IECSClient {
      */
     private void startNodeServer(String znodePath, IECSNode node) throws IOException {
         // TODO: complete path and argument of server
-        String cmd = "ssh -n " + node.getNodeHost() + " nohup java -jar <path>/ms2-server.jar " + node.getNodePort() + "blabla";
-        Process process = Runtime.getRuntime().exec(cmd);
-        processHashMap.put(znodePath, process);
+//        String cmd = "ssh -n " + node.getNodeHost() + " nohup java -jar <path>/ms2-server.jar " + node.getNodePort() + "blabla";
+//        Process process = Runtime.getRuntime().exec(cmd);
+//        processHashMap.put(znodePath, process);
     }
 
     /**
@@ -164,7 +164,7 @@ public class ECSClient implements IECSClient {
         }
         try {
             byte[] bytes = node.toBytes();
-            znodePath = zk.create(node.getNodeHash(), bytes, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+            znodePath = zk.create(node.getNodeName(), bytes, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
             znodeHashMap.put(znodePath, node);
         } catch (Exception e) {
             if (e instanceof KeeperException.InvalidACLException) {
@@ -308,36 +308,50 @@ public class ECSClient implements IECSClient {
      * @return  set of strings containing the names of the nodes
      */
     public Collection<IECSNode> addNodes(int count, String cacheStrategy, int cacheSize) {
-//        Collection<IECSNode> nodes = setupNodes(count, cacheStrategy, cacheSize);
-//        if (nodes == null) {
-//            return null;
-//        }
-//        for (IECSNode node: nodes) {
-//
-//        }
-        if (allNodes.getNumOfAvailableNodes() < count) {
-            System.out.println("not enough free nodes available");
+        Collection<IECSNode> nodes = setupNodes(count, cacheStrategy, cacheSize);
+        if (nodes == null) {
             return null;
         }
-        ArrayList<IECSNode> nodes = new ArrayList<>();
-        IECSNode node;
-        for (int i = 0; i < count; ++i) {
-            node = addNode(cacheStrategy, cacheSize);
-            if (node == null) {
-                // TODO: not sure if reverse what have been done
-                return null;
+        for (IECSNode node: nodes) {
+            try {
+                startNodeServer(node.getNodeName(), node);
+            } catch (IOException e) {
+                System.out.println("failed to launch node: " + node.getNodeName());
+                System.out.println(e.getLocalizedMessage());
+                znodeHashMap.remove(node.getNodeName());
+                allNodes.setNodeInUse((ECSNode) node, false);
             }
-            nodes.add(node);
-        }
 
-        // call awaitNodes
+        }
         try {
             awaitNodes(count, 3000);
         } catch (Exception e) {
-            System.out.println("Server connection timed out");
             System.out.println(e.getLocalizedMessage());
         }
         return nodes;
+//        if (allNodes.getNumOfAvailableNodes() < count) {
+//            System.out.println("not enough free nodes available");
+//            return null;
+//        }
+//        ArrayList<IECSNode> nodes = new ArrayList<>();
+//        IECSNode node;
+//        for (int i = 0; i < count; ++i) {
+//            node = addNode(cacheStrategy, cacheSize);
+//            if (node == null) {
+//                // TODO: not sure if reverse what have been done
+//                return null;
+//            }
+//            nodes.add(node);
+//        }
+//
+//        // call awaitNodes
+//        try {
+//            awaitNodes(count, 3000);
+//        } catch (Exception e) {
+//            System.out.println("Server connection timed out");
+//            System.out.println(e.getLocalizedMessage());
+//        }
+//        return nodes;
     }
 
     /**

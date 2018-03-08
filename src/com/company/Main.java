@@ -53,7 +53,10 @@ public class Main {
 //            KVStorageResult result = db.getKV("0");
 //            System.out.println(result.getValue());
 
-            ECSClient ecsClient = new ECSClient("localhost", 3000, 3000);
+//            ECSClient ecsClient = new ECSClient("localhost", 2181, 3000);
+            ECSClient client = new ECSClient("./ecs.config", "localhost", 2181, 3000);
+            client.addNode("LRU", 3000);
+//            client.setupNode("FIFO", 3333);
         } catch (IOException e) {
             System.out.println(e.getLocalizedMessage());
         }
