@@ -2,6 +2,7 @@ package com.company;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.Stat;
@@ -40,6 +41,11 @@ class ECSNodeManager {
         }
     }
 
+    /**
+     * This is the only method on client side that allows to change inUse state of node
+     * @param node
+     * @param inUse
+     */
     public void setNodeInUse(ECSNode node, boolean inUse) {
         if (node.inUse != inUse) {
             node.inUse = inUse;
@@ -79,8 +85,8 @@ class ECSNodeManager {
 public class ECSClient implements IECSClient {
     private ZooKeeper zk;
     private CountDownLatch countDownLatch = new CountDownLatch(1);// may be unnecessary
-    private HashMap<String, ECSNode> znodeHashMap = new HashMap<>(); // (znodePath, ecsnode)
-    private HashMap<String, Process> processHashMap = new HashMap<>(); // (znodePath, processes)
+    private HashMap<String, ECSNode> znodeHashMap = new HashMap<>(); // (znodePath i.e. nodeName, ecsnode)
+    private HashMap<String, Process> processHashMap = new HashMap<>(); // (znodePath i.e. nodeName, processes)
     private String zkIpAddress = "localhost";
     private int zkPort = 3000;
     private int sessionTimeout = 3000;
@@ -122,11 +128,10 @@ public class ECSClient implements IECSClient {
 
     /**
      * Run a KVServer process
-     * @param znodePath path given by zookeeper
      * @param node ECS node which contains metadata for the KVServer
      * @throws IOException
      */
-    private void startNodeServer(String znodePath, IECSNode node) throws IOException {
+    private void startNodeServer(IECSNode node) throws IOException {
         // TODO: complete path and argument of server
 //        String cmd = "ssh -n " + node.getNodeHost() + " nohup java -jar <path>/ms2-server.jar " + node.getNodePort() + "blabla";
 //        Process process = Runtime.getRuntime().exec(cmd);
@@ -156,15 +161,18 @@ public class ECSClient implements IECSClient {
      * @param cacheSize
      * @return znode path to the znode created
      */
-    private String setupNode(String cacheStrategy, int cacheSize) {
+    private ECSNode setupNode(String cacheStrategy, int cacheSize) {
         ECSNode node = popAvailableNode(cacheStrategy, cacheSize);
-        String znodePath = null;
         if (node == null) {
             return null;
         }
         try {
-            byte[] bytes = node.toBytes();
-            znodePath = zk.create(node.getNodeName(), bytes, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+            String znodePath = zk.create(node.getNodeName(), node.toBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+            if (!znodePath.equals(node.getNodeName())) { // this shouldn't happen
+                node.setNodeName(znodePath);
+                Stat stat = zk.exists(znodePath, true);
+                zk.setData(znodePath, node.toBytes(), stat.getVersion());
+            }
             znodeHashMap.put(znodePath, node);
         } catch (Exception e) {
             if (e instanceof KeeperException.InvalidACLException) {
@@ -172,33 +180,87 @@ public class ECSClient implements IECSClient {
             } else if (e instanceof KeeperException) {
                 System.out.println("the zookeeper server returns a non-zero error code");
             } else if (e instanceof InterruptedException) {
-                System.out.println("exiting client due to interrupted exception");
+                System.out.println("exiting ECS Client due to interrupted exception");
                 System.out.println(e.getLocalizedMessage());
                 // TODO: may be need to do some clean up e.g. zookeeper
                 System.exit(-1);
             }
 
             // TODO: may need more cleanup
+            // no need to remove from znodeHashMap since .put() will not be called if we get here
             allNodes.setNodeInUse(node, false);
-            znodeHashMap.remove(znodePath);
             System.out.println(e.getLocalizedMessage());
             return null;
         }
 
-        return znodePath;
+        return node;
 
     }
 
-    private boolean awaitNode(int timeout) {
-        // TODO: not sure what to do; may call get after create znode and set a watcher
-        // TODO: KVServer change znode state when connected
+    /**
+     * wait for a node to connect/disconnect
+     * @param znodePath
+     * @param timeoutMilli
+     * @param connected whether expect connect/disconnect state from server
+     * @return whether or not the server successfully connects/disconnects
+     */
+    private boolean awaitNode(String znodePath, int timeoutMilli, boolean connected) {
+        try {
+            TimeUnit.MILLISECONDS.sleep(timeoutMilli);
+            Stat stat = zk.exists(znodePath, true);
+            byte[] bytes = zk.getData(znodePath, true, stat);
+            ECSNode node = ECSNode.fromBytes(bytes);
+            if (node.connected == connected) {
+                return true;
+            }
+        } catch (Exception e) {
+            System.out.println(e.getLocalizedMessage());
+            if (e instanceof IOException) {
+                System.out.println("failed to deserialize node " + znodePath);
+            } else if (e instanceof InterruptedException) {
+                System.out.println("ECS Client exiting due to interrupted exception");
+                System.exit(-1);
+            }
+        }
         return false;
     }
 
+    /**
+     * remove a node completely: remove from client memory, kill the server and delete znode
+     * @param nodeName
+     * @return
+     */
     private boolean removeNode(String nodeName) {
-        // TODO: does it kill the server?
+        // remove memory representation of node
+        ECSNode node = znodeHashMap.remove(nodeName);
+        if (node == null || !node.inUse) {
+            return false;
+        }
+        allNodes.setNodeInUse(node, false);
+
+
+        node.todo = ECSNode.Action.Kill;
+        try {
+            // kill server and remove znode
+            Stat stat = zk.exists(nodeName, true);
+            stat = zk.setData(nodeName, node.toBytes(), stat.getVersion());
+            // TODO: wait till server exits?
+            zk.delete(nodeName, stat.getVersion());
+        } catch (KeeperException e) {
+            System.out.println(e.getLocalizedMessage());
+        } catch (InterruptedException e) {
+            System.out.println("ECS client existing due to interrupted exception");
+            System.exit(-1);
+        } catch (IOException e) {
+            System.out.println("failed to serialize node " + nodeName);
+        }
+
         return false;
     }
+
+//    private boolean start(ECSNode node) {
+//
+//    }
 
     //---------------IECSClient Implemntation---------------//
     /**
@@ -246,7 +308,7 @@ public class ECSClient implements IECSClient {
      * @return  true on success, false on failure
      */
     public boolean shutdown() throws Exception {
-        // TODO: should shutdown remove znode?
+        // TODO: should remove znode?
         stop();
         for (Map.Entry<String, ECSNode> entry: znodeHashMap.entrySet()) {
             String znodePath = entry.getKey();
@@ -279,24 +341,48 @@ public class ECSClient implements IECSClient {
      */
     // TODO: logging in exceptions
     public IECSNode addNode(String cacheStrategy, int cacheSize) {
-        String znodePath = setupNode(cacheStrategy, cacheSize);
-        if (znodePath == null) {
+        ECSNode node = setupNode(cacheStrategy, cacheSize);
+        if (node == null) {
             return null;
         }
-        ECSNode node = znodeHashMap.get(znodePath);
         try {
-            startNodeServer(znodePath, node);
+            startNodeServer(node);
         } catch (IOException e) {
-            System.out.println("failed to launch node: " + node.getNodeName());
+            System.out.println("failed to launch server: " + node.getNodeName());
             System.out.println(e.getLocalizedMessage());
-            znodeHashMap.remove(znodePath);
+
+            znodeHashMap.remove(node.getNodeName());
             allNodes.setNodeInUse(node, false);
+            try {
+                Stat stat = zk.exists(node.getNodeName(), true);
+                zk.delete(node.getNodeName(), stat.getVersion());
+            } catch (KeeperException ee) {
+                System.out.println(ee.getLocalizedMessage());
+            } catch (InterruptedException ee) {
+                System.out.println(ee.getLocalizedMessage());
+                System.out.println("ECS Client exiting due to interrupted exception");
+                System.exit(-1);
+            }
+
+        }
+        if (!awaitNode(node.getNodeName(), sessionTimeout, true)) {
+            removeNode(node.getNodeName());
+            // TODO: destroy process
+//            znodeHashMap.remove(node.getNodeName());
+//            allNodes.setNodeInUse(node, false);
+//            try {
+//                Stat stat = zk.exists(node.getNodeName(), true);
+//                zk.delete(node.getNodeName(), stat.getVersion());
+//            } catch (KeeperException ee) {
+//                System.out.println(ee.getLocalizedMessage());
+//            } catch (InterruptedException ee) {
+//                System.out.println(ee.getLocalizedMessage());
+//                System.out.println("ECS Client exiting due to interrupted exception");
+//                System.exit(-1);
+//            }
+            return null;
         }
 
-        if (!awaitNode(sessionTimeout)) {
-            // clean up: delete node and destroy process
-            return null;
-        }
         return node;
     }
 
@@ -314,44 +400,40 @@ public class ECSClient implements IECSClient {
         }
         for (IECSNode node: nodes) {
             try {
-                startNodeServer(node.getNodeName(), node);
+                startNodeServer(node);
             } catch (IOException e) {
-                System.out.println("failed to launch node: " + node.getNodeName());
+                System.out.println("failed to launch server: " + node.getNodeName());
                 System.out.println(e.getLocalizedMessage());
+
+                // TODO: should I delete the corresponding znode?
                 znodeHashMap.remove(node.getNodeName());
                 allNodes.setNodeInUse((ECSNode) node, false);
+                try {
+                    Stat stat = zk.exists(node.getNodeName(), true);
+                    zk.delete(node.getNodeName(), stat.getVersion());
+                } catch (KeeperException ee) {
+                    System.out.println(ee.getLocalizedMessage());
+                } catch (InterruptedException ee) {
+                    System.out.println(ee.getLocalizedMessage());
+                    System.out.println("ECS Client exiting due to interrupted exception");
+                    System.exit(-1);
+                }
+
             }
 
         }
         try {
-            awaitNodes(count, 3000);
+            if (!awaitNodes(count, sessionTimeout)) {
+                ArrayList<String> nodeNames = new ArrayList<>(nodes.size());
+                for (IECSNode node: nodes) {
+                    nodeNames.add(node.getNodeName());
+                }
+                removeNodes(nodeNames);
+            }
         } catch (Exception e) {
             System.out.println(e.getLocalizedMessage());
         }
         return nodes;
-//        if (allNodes.getNumOfAvailableNodes() < count) {
-//            System.out.println("not enough free nodes available");
-//            return null;
-//        }
-//        ArrayList<IECSNode> nodes = new ArrayList<>();
-//        IECSNode node;
-//        for (int i = 0; i < count; ++i) {
-//            node = addNode(cacheStrategy, cacheSize);
-//            if (node == null) {
-//                // TODO: not sure if reverse what have been done
-//                return null;
-//            }
-//            nodes.add(node);
-//        }
-//
-//        // call awaitNodes
-//        try {
-//            awaitNodes(count, 3000);
-//        } catch (Exception e) {
-//            System.out.println("Server connection timed out");
-//            System.out.println(e.getLocalizedMessage());
-//        }
-//        return nodes;
     }
 
     /**
@@ -364,9 +446,10 @@ public class ECSClient implements IECSClient {
             return null;
         }
         ArrayList<IECSNode> nodes = new ArrayList<>();
+        ECSNode node;
         for (int i = 0; i < count; ++i) {
-            String znothPath = setupNode(cacheStrategy, cacheSize);
-            nodes.add(znodeHashMap.get(znothPath));
+            node = setupNode(cacheStrategy, cacheSize);
+            nodes.add(node);
         }
         return nodes;
 
@@ -380,12 +463,13 @@ public class ECSClient implements IECSClient {
      */
     public boolean awaitNodes(int count, int timeout) throws Exception {
         // TODO: not sure what to do
-        for (int i = 0; i < count; ++i) {
-            if (!awaitNode(timeout)) {
-                return false;
-            }
-        }
-        return true;
+//        for (int i = 0; i < count; ++i) {
+//            if (!awaitNode(timeout)) {
+//                return false;
+//            }
+//        }
+//        return true;
+        return false;
     }
 
     /**

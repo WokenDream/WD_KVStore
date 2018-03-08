@@ -13,7 +13,7 @@ public class ECSNode implements IECSNode, Serializable {
 
     private static String HASH_ALGO = "MD5";
 
-    public static enum Action {
+    public enum Action {
         Start, Stop, Kill
     }
 
@@ -28,6 +28,7 @@ public class ECSNode implements IECSNode, Serializable {
 
     // stated vars
     public boolean inUse = false;
+    public boolean connected = false;
     public boolean started = false;
     public boolean stopped = true;
     public boolean killed = false;
@@ -69,6 +70,15 @@ public class ECSNode implements IECSNode, Serializable {
         }
     }
 
+    public static ECSNode fromBytes(byte[] bytes) throws IOException, ClassNotFoundException {
+        ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+        ObjectInput in = new ObjectInputStream(bis);
+        ECSNode node = (ECSNode) in.readObject();
+        bis.close();
+        in.close();
+        return node;
+    }
+
     public void setCacheSize(int size) {
         this.cacheSize = size;
     }
@@ -107,5 +117,9 @@ public class ECSNode implements IECSNode, Serializable {
         bos.close();
         out.close();
         return bytes;
+    }
+
+    public void setNodeName(String newName) {
+        name = newName;
     }
 }
