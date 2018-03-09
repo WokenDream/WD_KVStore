@@ -1,6 +1,8 @@
 package com.company;
 
 import java.io.IOException;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class Main {
 
@@ -54,8 +56,18 @@ public class Main {
 //            System.out.println(result.getValue());
 
 //            ECSClient ecsClient = new ECSClient("localhost", 2181, 3000);
-            ECSClient client = new ECSClient("./ecs.config", "localhost", 2181, 3000);
-            client.addNode("LRU", 3000);
+            TreeMap<String, String> treeMap = new TreeMap<>();
+            treeMap.put("5", "3");
+            treeMap.put("3", "4");
+            treeMap.put("4", "4");
+            for (String key: treeMap.keySet()) {
+                System.out.println(key);
+            }
+            for (Map.Entry<String, String> entry :treeMap.entrySet()) {
+                System.out.println(entry.getKey());
+            }
+//            ECSClient client = new ECSClient("./ecs.config", "localhost", 2181, 3000);
+//            client.addNode("LRU", 3000);
 //            client.setupNode("FIFO", 3333);
         } catch (IOException e) {
             System.out.println(e.getLocalizedMessage());
