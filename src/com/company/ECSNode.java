@@ -21,17 +21,17 @@ public class ECSNode implements IECSNode, Serializable {
     private String ipAddress;
     private int port;
     private String[] hashRange; // (predecessor, me]
-    public TreeMap<String, String> hashRing = new TreeMap<>(); // (hash, nodeName: may need to change)
+    public TreeMap<String, IECSNode> hashRing = new TreeMap<>(); // (hash, ecsnode)
 
     private int cacheSize;
     private String cacheStrategy;
 
     // stated vars
-    public boolean inUse = false;
-    public boolean connected = false;
-    public boolean started = false;
-    public boolean stopped = true;
-    public boolean killed = false;
+    public boolean inUse = false; // can only be touched by ECS
+    public boolean connected = false; // can only be touched by KVServer
+    public boolean started = false; // can only be touched by KVServer
+    public boolean stopped = true; // can only be touched by KVServer
+    public boolean killed = false; // can only be touched by KVServer
     public Action todo;
 
     public ECSNode(String name, String ipAddress, int port) {

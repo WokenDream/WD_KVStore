@@ -90,7 +90,7 @@ public class ECSClient implements IECSClient {
     private ZooKeeper zk;
     private CountDownLatch countDownLatch = new CountDownLatch(1);// may be unnecessary
     private HashMap<String, ECSNode> znodeHashMap = new HashMap<>(); // (znodePath i.e. nodeName, ecsnode)
-    private TreeMap<String, String> hashRing = new TreeMap<>(); // (hash, znodepath)
+    private TreeMap<String, IECSNode> hashRing = new TreeMap<>(); // (hash, znodepath)
     private HashMap<String, Process> processHashMap = new HashMap<>(); // (znodePath i.e. nodeName, processes)
     private String zkIpAddress = "localhost";
     private int zkPort = 3000;
@@ -329,7 +329,7 @@ public class ECSClient implements IECSClient {
     private boolean updateHashRingOfEveryZnode(ECSNode newNode) {
         // update hash ring of every one
         boolean success = true;
-        hashRing.put(newNode.getNodeHash(), newNode.getNodeName());
+        hashRing.put(newNode.getNodeHash(), newNode);
         for (Map.Entry<String, ECSNode> entry: znodeHashMap.entrySet()) {
             String znodePath = entry.getKey();
             ECSNode tempNode = entry.getValue();
@@ -345,7 +345,7 @@ public class ECSClient implements IECSClient {
      */
     private boolean updateHashRingOfEveryZnode(Collection<IECSNode> nodes) {
         for (IECSNode node: nodes) {
-            hashRing.put(node.getNodeHashRange()[1], node.getNodeName());
+            hashRing.put(node.getNodeHashRange()[1], node);
         }
         for (Map.Entry<String, ECSNode> entry: znodeHashMap.entrySet()) {
             String znodePath = entry.getKey();

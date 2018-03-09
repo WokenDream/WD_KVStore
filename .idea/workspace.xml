@@ -28,8 +28,8 @@
       <file leaf-file-name="ECSNode.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/com/company/ECSNode.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="130">
-              <caret line="22" column="30" lean-forward="false" selection-start-line="22" selection-start-column="21" selection-end-line="22" selection-end-column="30" />
+            <state relative-caret-position="495">
+              <caret line="33" column="69" lean-forward="false" selection-start-line="33" selection-start-column="69" selection-end-line="33" selection-end-column="69" />
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -40,8 +40,8 @@
       <file leaf-file-name="ECSClient.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/com/company/ECSClient.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-3394">
-              <caret line="272" column="48" lean-forward="false" selection-start-line="272" selection-start-column="48" selection-end-line="272" selection-end-column="48" />
+            <state relative-caret-position="-1260">
+              <caret line="331" column="20" lean-forward="false" selection-start-line="331" selection-start-column="8" selection-end-line="331" selection-end-column="20" />
               <folding>
                 <element signature="imports" expanded="true" />
                 <element signature="method#ECSNodeManager#0;class#ECSNodeManager#0" expanded="false" />
@@ -49,16 +49,6 @@
                 <element signature="e#2054#2055#0" expanded="true" />
                 <element signature="method#getNodeMap#0;class#ECSNodeManager#0" expanded="false" />
               </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="Util.java" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/com/company/Util.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="705">
-              <caret line="52" column="20" lean-forward="false" selection-start-line="52" selection-start-column="20" selection-end-line="52" selection-end-column="20" />
-              <folding />
             </state>
           </provider>
         </entry>
@@ -75,7 +65,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>dbpath</find>
       <find>user.dir</find>
       <find>epher</find>
       <find>zk.setda</find>
@@ -105,6 +94,7 @@
       <find>process</find>
       <find>processes</find>
       <find>processHashMap</find>
+      <find>hashring.put</find>
     </findStrings>
   </component>
   <component name="IdeDocumentHistory">
@@ -122,8 +112,8 @@
         <option value="$PROJECT_DIR$/src/com/company/Util.java" />
         <option value="$PROJECT_DIR$/src/com/company/ecs.config" />
         <option value="$PROJECT_DIR$/src/com/company/Main.java" />
-        <option value="$PROJECT_DIR$/src/com/company/ECSNode.java" />
         <option value="$PROJECT_DIR$/src/com/company/ECSClient.java" />
+        <option value="$PROJECT_DIR$/src/com/company/ECSNode.java" />
       </list>
     </option>
   </component>
@@ -672,14 +662,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/com/company/Util.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="705">
-          <caret line="52" column="20" lean-forward="false" selection-start-line="52" selection-start-column="20" selection-end-line="52" selection-end-column="20" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/com/company/Main.java">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="930">
@@ -745,18 +727,26 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/com/company/ECSNode.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="130">
-          <caret line="22" column="30" lean-forward="false" selection-start-line="22" selection-start-column="21" selection-end-line="22" selection-end-column="30" />
+        <state relative-caret-position="495">
+          <caret line="33" column="69" lean-forward="false" selection-start-line="33" selection-start-column="69" selection-end-line="33" selection-end-column="69" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/com/company/Util.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="705">
+          <caret line="52" column="20" lean-forward="false" selection-start-line="52" selection-start-column="20" selection-end-line="52" selection-end-column="20" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/com/company/ECSClient.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-3394">
-          <caret line="272" column="48" lean-forward="false" selection-start-line="272" selection-start-column="48" selection-end-line="272" selection-end-column="48" />
+        <state relative-caret-position="-1260">
+          <caret line="331" column="20" lean-forward="false" selection-start-line="331" selection-start-column="8" selection-end-line="331" selection-end-column="20" />
           <folding>
             <element signature="imports" expanded="true" />
             <element signature="method#ECSNodeManager#0;class#ECSNodeManager#0" expanded="false" />
