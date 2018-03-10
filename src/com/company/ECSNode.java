@@ -96,7 +96,7 @@ public class ECSNode implements IECSNode, Serializable {
         return hashRange[1];
     }
 
-    public void setNodepredecessor(String predecessorHash) {
+    public void setNodeHashLowRange(String predecessorHash) {
         hashRange[0] = predecessorHash;
     }
 
@@ -121,5 +121,13 @@ public class ECSNode implements IECSNode, Serializable {
 
     public void setNodeName(String newName) {
         name = newName;
+    }
+
+    public int getCacheSize() {
+        return cacheSize;
+    }
+
+    public String getCacheStrategy() {
+        return cacheStrategy;
     }
 }

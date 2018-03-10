@@ -369,7 +369,7 @@ public class ECSClient implements IECSClient {
         if (predecessor == null) {
             predecessor = hashRing.lastKey();
         }
-        node.setNodepredecessor(predecessor);
+        node.setNodeHashLowRange(predecessor);
         try {
             Stat stat = zk.exists(znodePath, true);
             zk.setData(znodePath, node.toBytes(), stat.getVersion());
