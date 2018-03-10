@@ -67,6 +67,7 @@ public class KVStorage extends KVSimpleStorage {
                 }
             }
         } catch (IOException e) {
+            System.out.println(e.getLocalizedMessage());
             throw e;
         } finally {
             lock.unlock();

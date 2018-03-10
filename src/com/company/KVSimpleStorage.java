@@ -6,6 +6,7 @@ import java.nio.file.InvalidPathException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -92,6 +93,7 @@ public class KVSimpleStorage {
 
             }
         } catch (IOException ioe) {
+            System.out.println(ioe.getLocalizedMessage());
             throw ioe;
         } finally {
             lock.unlock();
@@ -229,6 +231,62 @@ public class KVSimpleStorage {
         }
 
         return kvPairs.size() == 0 ? null : kvPairs;
+    }
+
+    /**
+     * Store all the given KV pairs to disk
+     * @param kvPairs
+     * @return true if all pairs are put successfully, false otherwise
+     * @throws IOException
+     */
+    public boolean putKV(Map<String, String> kvPairs) throws IOException {
+        if (kvPairs == null || kvPairs.isEmpty()) {
+            return false;
+        }
+        boolean success = true;
+        lock.lock();
+        try {
+            while (numOfReader > 0) {
+                try {
+                    noReaderCondition.await();
+                } catch (InterruptedException e) {
+                    // TODO: log
+                }
+            }
+            String key, value;
+            File file;
+            for (Map.Entry<String, String> kvPair: kvPairs.entrySet()) {
+                key = kvPair.getKey();
+                value = kvPair.getValue();
+                file = new File(getFilePath(key));
+                if (value.equals("null")) {
+                    if (!deleteFromStorage(key)) {
+                        success = false;
+                        break;
+                    }
+                } else if (file.exists()) {
+                    if (!updatePair(file, key, value)) {
+                        success = false;
+                        break;
+                    }
+                } else {
+                    try {
+                        createPair(file, key, value);
+                    } catch (IOException ioe) {
+                        success = false;
+                        break;
+                    }
+
+                }
+            }
+
+        } catch (IOException ioe) {
+            System.out.println(ioe.getLocalizedMessage());
+            throw ioe;
+        } finally {
+            lock.unlock();
+        }
+        return success;
     }
 
     /**
