@@ -131,10 +131,10 @@ public class ECSNode implements IECSNode, Serializable {
         return cacheStrategy;
     }
 
-    public boolean isKeyInRange() {
+    public boolean isKeyInRange(String key) {
         try {
             MessageDigest messageDigest = MessageDigest.getInstance(HASH_ALGO);
-            byte[] bytes = messageDigest.digest((ipAddress + ":" + port).getBytes());
+            byte[] bytes = messageDigest.digest(key.getBytes());
             String hash = DatatypeConverter.printHexBinary(bytes);
             if (hashRange[0].compareTo(hash) < 0 && hash.compareTo(hashRange[1]) <= 0) {
                 return true;
