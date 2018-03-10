@@ -152,4 +152,8 @@ public class ECSNode implements IECSNode, Serializable {
         return false;
 
     }
+
+    public TreeMap<String, IECSNode> getHashRing() {
+        return hashRing;
+    }
 }
