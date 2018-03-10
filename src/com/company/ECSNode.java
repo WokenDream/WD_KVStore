@@ -130,4 +130,26 @@ public class ECSNode implements IECSNode, Serializable {
     public String getCacheStrategy() {
         return cacheStrategy;
     }
+
+    public boolean isKeyInRange() {
+        try {
+            MessageDigest messageDigest = MessageDigest.getInstance(HASH_ALGO);
+            byte[] bytes = messageDigest.digest((ipAddress + ":" + port).getBytes());
+            String hash = DatatypeConverter.printHexBinary(bytes);
+            if (hashRange[0].compareTo(hash) < 0 && hash.compareTo(hashRange[1]) <= 0) {
+                return true;
+            } else {
+                String smallestHash = hashRing.firstKey();
+                String largestHash = hashRing.lastKey();
+                if (smallestHash.equals(hashRange[1]) && (hash.compareTo(smallestHash) <= 0 || hash.compareTo(largestHash) > 0)) {
+                    return true;
+                }
+            }
+        } catch (NoSuchAlgorithmException e) {
+            System.out.println(e.getLocalizedMessage());
+            return false;
+        }
+        return false;
+
+    }
 }
