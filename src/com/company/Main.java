@@ -10,7 +10,22 @@ public class Main {
 	// write your code here
 
         try {
-            KVSimpleStorage db = new KVStorage("./newDB/", 400, IKVServer.CacheStrategy.LRU);
+//            KVSimpleStorage db = new KVStorage("./newDB/", 400, IKVServer.CacheStrategy.LRU);
+//
+//            db.putKV("k1", "k2");
+//            System.out.println(db.inStorage("k1"));
+//            System.out.println(db.inCache("k1"));
+//            System.out.println(db.getKV("k1").getValue());
+//            db.clearStorage();
+//            System.out.println(db.inStorage("k1"));
+//            System.out.println(db.inCache("k1"));
+//            System.out.println(db.getKV("k1").getValue());
+//            db.putKV("k1", "k2");
+//            System.out.println(db.inStorage("k1"));
+//            System.out.println(db.inCache("k1"));
+//            System.out.println(db.getKV("k1").getValue());
+
+            KVSimpleStorage db = new KVSimpleStorage("./newDB");
             db.putKV("k1", "k2");
             System.out.println(db.inStorage("k1"));
             System.out.println(db.inCache("k1"));
@@ -19,6 +34,11 @@ public class Main {
             System.out.println(db.inStorage("k1"));
             System.out.println(db.inCache("k1"));
             System.out.println(db.getKV("k1").getValue());
+            db.putKV("k1", "k2");
+            System.out.println(db.inStorage("k1"));
+            System.out.println(db.inCache("k1"));
+            System.out.println(db.getKV("k1").getValue());
+            db.deleteKVInRange("0", "FFFFFFFFFFFFFFFF");
 //            String key = "updateTestValue";
 //            String val = "initial";
 //            KVStorageResult result = db.putKV(key, val);
@@ -56,16 +76,6 @@ public class Main {
 //            System.out.println(result.getValue());
 
 //            ECSClient ecsClient = new ECSClient("localhost", 2181, 3000);
-            TreeMap<String, String> treeMap = new TreeMap<>();
-            treeMap.put("5", "3");
-            treeMap.put("3", "4");
-            treeMap.put("4", "4");
-            for (String key: treeMap.keySet()) {
-                System.out.println(key);
-            }
-            for (Map.Entry<String, String> entry :treeMap.entrySet()) {
-                System.out.println(entry.getKey());
-            }
 //            ECSClient client = new ECSClient("./ecs.config", "localhost", 2181, 3000);
 //            client.addNode("LRU", 3000);
 //            client.setupNode("FIFO", 3333);

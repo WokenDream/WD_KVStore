@@ -1,7 +1,11 @@
 package com.company;
 
+import javax.xml.bind.DatatypeConverter;
 import java.io.*;
 import java.nio.file.InvalidPathException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -177,9 +181,81 @@ public class KVSimpleStorage {
                     System.out.println("Failed to delete " + file);
                 }
             }
-            if(!dir.delete()) {
-                // TODO: logging
-                System.out.println("Failed to delete " + dir);
+        }
+
+        lock.unlock();
+    }
+
+    /**
+     * Return all the kv pairs in the given range
+     * @param lowerInclusive
+     * @param upperInclusive
+     * @return HashMap of KV pairs; null if no file found within the range or arguments are invalid
+     * @throws IOException
+     */
+    public HashMap<String, String> getKVInRange(String lowerInclusive, String upperInclusive) throws IOException {
+        if (lowerInclusive == null || upperInclusive == null || lowerInclusive.compareTo(upperInclusive) >= 0) {
+            return null;
+        }
+        lowerInclusive += ".txt";
+        upperInclusive += ".txt";
+
+        lock.lock();
+
+        File dir = new File(dbPath);
+        File[] files = dir.listFiles();
+        HashMap<String, String> kvPairs = new HashMap<>();
+        try {
+            if (files != null) { // if db is not empty
+                BufferedReader reader;
+                String fileName, key, val;
+
+                for (File file: files) {
+                    fileName = file.getName();
+
+                    if (lowerInclusive.compareTo(fileName) <= 0 && fileName.compareTo(upperInclusive) <= 0) {
+                        reader = new BufferedReader(new FileReader(file));
+                        while ((key = reader.readLine()) != null) {
+                            key = key.substring(afterIndicator);
+                            val = reader.readLine().substring(afterIndicator);
+                            kvPairs.put(key, val);
+                        }
+                        reader.close();
+                    }
+                }
+            }
+        } finally {
+            lock.unlock();
+        }
+
+        return kvPairs.size() == 0 ? null : kvPairs;
+    }
+
+    /**
+     * delete files from disk within the given range
+     * @param lowerInclusive
+     * @param upperInclusive
+     */
+    public void deleteKVInRange(String lowerInclusive, String upperInclusive) {
+        if (lowerInclusive == null || upperInclusive == null || lowerInclusive.compareTo(upperInclusive) >= 0) {
+            return;
+        }
+        lowerInclusive += ".txt";
+        upperInclusive += ".txt";
+
+        lock.lock();
+        File dir = new File(dbPath);
+        File[] files = dir.listFiles();
+        if (files != null) {
+            String fileName;
+            for (File file: files) {
+                fileName = file.getName();
+
+                if (lowerInclusive.compareTo(fileName) <= 0 && fileName.compareTo(upperInclusive) <= 0 && !file.delete()) {
+                    // TODO: logging
+                    System.out.println("Failed to delete " + file);
+                }
+
             }
         }
 
@@ -238,11 +314,20 @@ public class KVSimpleStorage {
      * @return file path
      */
     protected String getFilePath(String key) {
-        // let the hashcode of the key be the name of the file
         StringBuilder sb = new StringBuilder(dbPath);
-        sb.append(key.hashCode());
+        try {
+            MessageDigest messageDigest = MessageDigest.getInstance("MD5");
+            byte[] bytes = messageDigest.digest(key.getBytes());
+            sb.append(DatatypeConverter.printHexBinary(bytes));
+        } catch (NoSuchAlgorithmException e) {
+            System.out.println(e.getLocalizedMessage());
+            // if MD5 fails
+            // let the hashcode of the key be the name of the file
+            sb.append(key.hashCode());
+        }
         sb.append(".txt");
         return sb.toString();
+
     }
 
     /**
