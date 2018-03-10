@@ -203,8 +203,8 @@ public class ECSClient implements IECSClient {
         if (node == null || !createZnode(node)) {
             return null;
         }
-        if (!updateHashRingOfEveryZnode(node)) {
-            removeNode(node.getNodeName());
+        if (!updateHashRingOfEveryZnode(node, true)) {
+            removeNode(node.getNodeName(), true);
             return null;
         }
         return node;
@@ -263,7 +263,7 @@ public class ECSClient implements IECSClient {
      * @param nodeName
      * @return
      */
-    private boolean removeNode(String nodeName) {
+    private boolean removeNode(String nodeName, boolean updateHashRing) {
         // remove memory representation of node
         ECSNode node = znodeHashMap.remove(nodeName);
         if (node == null || !node.inUse) {
@@ -280,6 +280,9 @@ public class ECSClient implements IECSClient {
                 stat = zk.setData(nodeName, node.toBytes(), stat.getVersion());
                 // TODO: wait till server exits?
                 zk.delete(nodeName, stat.getVersion());
+                if (updateHashRing) {
+                    updateHashRingOfEveryZnode(node, false);
+                }
                 processHashMap.remove(nodeName);
             } catch (KeeperException e) {
                 System.out.println(e.getLocalizedMessage());
@@ -336,14 +339,21 @@ public class ECSClient implements IECSClient {
      * @param newNode newly created ecsnode
      * @return
      */
-    private boolean updateHashRingOfEveryZnode(ECSNode newNode) {
+    private boolean updateHashRingOfEveryZnode(ECSNode newNode, boolean toAdd) {
         // update hash ring of every one
+        if (toAdd) {
+            hashRing.put(newNode.getNodeHash(), newNode);
+        } else if (hashRing.remove(newNode) == null) {
+            return false;
+        }
+
         boolean success = true;
-        hashRing.put(newNode.getNodeHash(), newNode);
         for (Map.Entry<String, ECSNode> entry: znodeHashMap.entrySet()) {
             String znodePath = entry.getKey();
             ECSNode tempNode = entry.getValue();
-            updateHashRingOfEveryZnodeHelper(znodePath, tempNode);
+            if (!updateHashRingOfEveryZnodeHelper(znodePath, tempNode)) {
+                success =  false;
+            }
         }
         return success;
     }
@@ -353,16 +363,28 @@ public class ECSClient implements IECSClient {
      * @param nodes
      * @return
      */
-    private boolean updateHashRingOfEveryZnode(Collection<IECSNode> nodes) {
-        for (IECSNode node: nodes) {
-            hashRing.put(node.getNodeHashRange()[1], node);
+    private boolean updateHashRingOfEveryZnode(Collection<IECSNode> nodes, boolean toAdd) {
+        boolean success = true;
+        if (toAdd) {
+            for (IECSNode node: nodes) {
+                hashRing.put(node.getNodeHashRange()[1], node);
+            }
+        } else {
+            for (IECSNode node: nodes) {
+                if (hashRing.remove(node.getNodeHashRange()[1], node)) {
+                    success = false;
+                }
+            }
         }
+
         for (Map.Entry<String, ECSNode> entry: znodeHashMap.entrySet()) {
             String znodePath = entry.getKey();
             ECSNode tempNode = entry.getValue();
-            updateHashRingOfEveryZnodeHelper(znodePath, tempNode);
+            if (!updateHashRingOfEveryZnodeHelper(znodePath, tempNode) ) {
+                success = false;
+            }
         }
-        return false;
+        return success;
     }
 
     /**
@@ -485,7 +507,7 @@ public class ECSClient implements IECSClient {
             return null;
         }
         if (!startNodeServer(node) || awaitNode(node.getNodeName(), sessionTimeout, true)) {
-            removeNode(node.getNodeName());
+            removeNode(node.getNodeName(), true);
         }
         return node;
     }
@@ -505,15 +527,17 @@ public class ECSClient implements IECSClient {
         if (!startNodeServers(nodes)) {
             // remove nodes
             for (IECSNode node: nodes) {
-                removeNode(node.getNodeName());
+                removeNode(node.getNodeName(), false);
             }
+            updateHashRingOfEveryZnode(nodes, false);
             return null;
         }
         try {
             if (!awaitNodes(count, sessionTimeout)) {
                 for (IECSNode node: nodes) {
-                    removeNode(node.getNodeName());
+                    removeNode(node.getNodeName(), false);
                 }
+                updateHashRingOfEveryZnode(nodes, false);
             }
         } catch (Exception e) {
             // TODO: check when exception is thrown
@@ -539,11 +563,12 @@ public class ECSClient implements IECSClient {
             }
             nodes.add(node);
         }
-        if (!updateHashRingOfEveryZnode(nodes)) {
+        if (!updateHashRingOfEveryZnode(nodes, true)) {
             // remove nodes
             for (IECSNode node: nodes) {
-                removeNode(node.getNodeName());
+                removeNode(node.getNodeName(), false);
             }
+            updateHashRingOfEveryZnode(nodes, false);
         }
         return nodes;
 
@@ -593,11 +618,20 @@ public class ECSClient implements IECSClient {
     public boolean removeNodes(Collection<String> nodeNames) {
         // TODO: see removeNode
         boolean allRemoved = true;
+        ArrayList<IECSNode> nodes = new ArrayList<>();
+        ECSNode node;
         for (String nodeName: nodeNames) {
-            if (!removeNode(nodeName)) {
+            if (!removeNode(nodeName, false)) {
                 allRemoved = false;
             }
+            node = znodeHashMap.get(nodeName);
+            if (node != null) {
+                nodes.add(node);
+            } else {
+                System.out.println("node: " + nodeName + " is not found in znodeHashMap");
+            }
         }
+        updateHashRingOfEveryZnode(nodes, false);
         return allRemoved;
     }
 
