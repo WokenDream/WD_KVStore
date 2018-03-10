@@ -92,18 +92,28 @@ public class ECSClient implements IECSClient {
     private HashMap<String, ECSNode> znodeHashMap = new HashMap<>(); // (znodePath i.e. nodeName, ecsnode)
     private TreeMap<String, IECSNode> hashRing = new TreeMap<>(); // (hash, znodepath)
     private HashMap<String, Process> processHashMap = new HashMap<>(); // (znodePath i.e. nodeName, processes)
+    private String configPath = "ecs.config";
     private String zkIpAddress = "localhost";
-    private int zkPort = 3000;
+    private int zkPort = 2181;
     private int sessionTimeout = 3000;
 
     private ECSNodeManager allNodes;
 
     public ECSClient(String configPath, String zkIpAddress, int zkPort, int sessionTimeout) throws IOException {
         allNodes = new ECSNodeManager(configPath);
+        this.configPath = configPath;
         this.zkIpAddress = zkIpAddress;
         this.zkPort = zkPort;
         this.sessionTimeout = sessionTimeout;
         connectToZookeeper();
+    }
+
+    public ECSClient(String zkIpAddress, int zkPort) throws IOException {
+        allNodes = new ECSNodeManager(configPath);
+        this.zkIpAddress = zkIpAddress;
+        this.zkPort = zkPort;
+        connectToZookeeper();
+
     }
 
     //------------------custom implementation---------------//

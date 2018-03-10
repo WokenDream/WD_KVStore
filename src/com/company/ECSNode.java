@@ -14,7 +14,7 @@ public class ECSNode implements IECSNode, Serializable {
     private static String HASH_ALGO = "MD5";
 
     public enum Action {
-        Start, Stop, Kill
+        None, Start, Stop, Kill
     }
 
     private String name;
@@ -32,7 +32,7 @@ public class ECSNode implements IECSNode, Serializable {
     public boolean started = false; // can only be touched by KVServer
     public boolean stopped = true; // can only be touched by KVServer
     public boolean killed = false; // can only be touched by KVServer
-    public Action todo;
+    public Action todo = Action.None;
 
     public ECSNode(String name, String ipAddress, int port) {
         initNode(name, ipAddress, port);
