@@ -16,11 +16,10 @@ public class ECSCli {
     private static ECSClient client;
 
     public static void main(String[] args) {
-        String configPath = ECSClient.configPath;
         if (args == null || args.length == 0) {
             System.out.println("No config file provided. Using the default config file");
         } else if (args.length == 1) {
-            configPath = args[0];
+            ECSClient.configPath = args[0];
         } else {
             System.out.println("You can optionally provide just one argument as the config file path");
             System.out.println("exiting");
