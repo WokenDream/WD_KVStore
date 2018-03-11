@@ -190,20 +190,18 @@ public class KVSimpleStorage {
 
     /**
      * Return all the kv pairs in the given range
-     * @param lowerInclusive
+     * @param lowerExclusive
      * @param upperInclusive
      * @return HashMap of KV pairs; null if no file found within the range or arguments are invalid
      * @throws IOException
      */
-    public HashMap<String, String> getKVInRange(String lowerInclusive, String upperInclusive) throws IOException {
-        if (lowerInclusive == null || upperInclusive == null || lowerInclusive.compareTo(upperInclusive) >= 0) {
+    public HashMap<String, String> getKVInRange(String lowerExclusive, String upperInclusive) throws IOException {
+        if (lowerExclusive == null || upperInclusive == null || lowerExclusive.compareTo(upperInclusive) == 0) {
             return null;
         }
-        lowerInclusive += ".txt";
+        lowerExclusive += ".txt";
         upperInclusive += ".txt";
-
         lock.lock();
-
         File dir = new File(dbPath);
         File[] files = dir.listFiles();
         HashMap<String, String> kvPairs = new HashMap<>();
@@ -211,27 +209,114 @@ public class KVSimpleStorage {
             if (files != null) { // if db is not empty
                 BufferedReader reader;
                 String fileName, key, val;
+                if (lowerExclusive.compareTo(upperInclusive) > 0) {
+                    // corner case: wrap around
+                    for (File file: files) {
+                        fileName = file.getName();
 
-                for (File file: files) {
-                    fileName = file.getName();
-
-                    if (lowerInclusive.compareTo(fileName) <= 0 && fileName.compareTo(upperInclusive) <= 0) {
-                        reader = new BufferedReader(new FileReader(file));
-                        while ((key = reader.readLine()) != null) {
-                            key = key.substring(afterIndicator);
-                            val = reader.readLine().substring(afterIndicator);
-                            kvPairs.put(key, val);
+                        if (lowerExclusive.compareTo(fileName) < 0 || fileName.compareTo(upperInclusive) <= 0) {
+                            reader = new BufferedReader(new FileReader(file));
+                            while ((key = reader.readLine()) != null) {
+                                key = key.substring(afterIndicator);
+                                val = reader.readLine().substring(afterIndicator);
+                                kvPairs.put(key, val);
+                            }
+                            reader.close();
                         }
-                        reader.close();
+                    }
+                } else {
+                    for (File file: files) {
+                        fileName = file.getName();
+
+                        if (lowerExclusive.compareTo(fileName) < 0 && fileName.compareTo(upperInclusive) <= 0) {
+                            reader = new BufferedReader(new FileReader(file));
+                            while ((key = reader.readLine()) != null) {
+                                key = key.substring(afterIndicator);
+                                val = reader.readLine().substring(afterIndicator);
+                                kvPairs.put(key, val);
+                            }
+                            reader.close();
+                        }
                     }
                 }
             }
+
         } finally {
             lock.unlock();
         }
-
         return kvPairs.size() == 0 ? null : kvPairs;
+
     }
+//    public HashMap<String, String> getKVInRange(String lowerExclusive, String upperInclusive) throws IOException {
+//        if (lowerExclusive == null || upperInclusive == null || lowerExclusive.compareTo(upperInclusive) == 0) {
+//            return null;
+//        }
+//        lowerExclusive += ".txt";
+//        upperInclusive += ".txt";
+//        if (lowerExclusive.compareTo(upperInclusive) > 0) {
+//            // corner case: wrap around
+//            lock.lock();
+//
+//            File dir = new File(dbPath);
+//            File[] files = dir.listFiles();
+//            HashMap<String, String> kvPairs = new HashMap<>();
+//            try {
+//                if (files != null) { // if db is not empty
+//                    BufferedReader reader;
+//                    String fileName, key, val;
+//
+//                    for (File file: files) {
+//                        fileName = file.getName();
+//
+//                        if (lowerExclusive.compareTo(fileName) < 0 || fileName.compareTo(upperInclusive) <= 0) {
+//                            reader = new BufferedReader(new FileReader(file));
+//                            while ((key = reader.readLine()) != null) {
+//                                key = key.substring(afterIndicator);
+//                                val = reader.readLine().substring(afterIndicator);
+//                                kvPairs.put(key, val);
+//                            }
+//                            reader.close();
+//                        }
+//                    }
+//                }
+//            } finally {
+//                lock.unlock();
+//            }
+//            return kvPairs;
+//
+//        } else {
+//            lock.lock();
+//
+//            File dir = new File(dbPath);
+//            File[] files = dir.listFiles();
+//            HashMap<String, String> kvPairs = new HashMap<>();
+//            try {
+//                if (files != null) { // if db is not empty
+//                    BufferedReader reader;
+//                    String fileName, key, val;
+//
+//                    for (File file: files) {
+//                        fileName = file.getName();
+//
+//                        if (lowerExclusive.compareTo(fileName) < 0 && fileName.compareTo(upperInclusive) <= 0) {
+//                            reader = new BufferedReader(new FileReader(file));
+//                            while ((key = reader.readLine()) != null) {
+//                                key = key.substring(afterIndicator);
+//                                val = reader.readLine().substring(afterIndicator);
+//                                kvPairs.put(key, val);
+//                            }
+//                            reader.close();
+//                        }
+//                    }
+//                }
+//            } finally {
+//                lock.unlock();
+//            }
+//
+//            return kvPairs.size() == 0 ? null : kvPairs;
+//        }
+//
+//    }
 
     /**
      * Store all the given KV pairs to disk
@@ -291,14 +376,14 @@ public class KVSimpleStorage {
 
     /**
      * delete files from disk within the given range
-     * @param lowerInclusive
+     * @param lowerExclusive
      * @param upperInclusive
      */
-    public void deleteKVInRange(String lowerInclusive, String upperInclusive) {
-        if (lowerInclusive == null || upperInclusive == null || lowerInclusive.compareTo(upperInclusive) >= 0) {
+    public void deleteKVInRange(String lowerExclusive, String upperInclusive) {
+        if (lowerExclusive == null || upperInclusive == null || lowerExclusive.compareTo(upperInclusive) == 0) {
             return;
         }
-        lowerInclusive += ".txt";
+        lowerExclusive += ".txt";
         upperInclusive += ".txt";
 
         lock.lock();
@@ -306,15 +391,29 @@ public class KVSimpleStorage {
         File[] files = dir.listFiles();
         if (files != null) {
             String fileName;
-            for (File file: files) {
-                fileName = file.getName();
+            if (lowerExclusive.compareTo(upperInclusive) > 0) {
+                // wrap around case
+                for (File file: files) {
+                    fileName = file.getName();
 
-                if (lowerInclusive.compareTo(fileName) <= 0 && fileName.compareTo(upperInclusive) <= 0 && !file.delete()) {
-                    // TODO: logging
-                    System.out.println("Failed to delete " + file);
+                    if (lowerExclusive.compareTo(fileName) < 0 || fileName.compareTo(upperInclusive) <= 0 && !file.delete()) {
+                        // TODO: logging
+                        System.out.println("Failed to delete " + file);
+                    }
+
                 }
+            } else {
+                for (File file: files) {
+                    fileName = file.getName();
 
+                    if (lowerExclusive.compareTo(fileName) < 0 && fileName.compareTo(upperInclusive) <= 0 && !file.delete()) {
+                        // TODO: logging
+                        System.out.println("Failed to delete " + file);
+                    }
+
+                }
             }
+
         }
 
         lock.unlock();
