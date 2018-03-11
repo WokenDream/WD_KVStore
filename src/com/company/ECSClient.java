@@ -203,7 +203,7 @@ public class ECSClient implements IECSClient {
         if (node == null || !createZnode(node)) {
             return null;
         }
-        if (!updateHashRingOfEveryZnodeUsing(node, true)) {
+        if (!updateMetadataOfEveryZnodeUsing(node, true)) {
             removeNode(node.getNodeName(), true);
             return null;
         }
@@ -281,7 +281,7 @@ public class ECSClient implements IECSClient {
                 // TODO: wait till server exits?
                 zk.delete(nodeName, stat.getVersion());
                 if (updateHashRing) {
-                    updateHashRingOfEveryZnodeUsing(node, false);
+                    updateMetadataOfEveryZnodeUsing(node, false);
                 }
                 processHashMap.remove(nodeName);
             } catch (KeeperException e) {
@@ -339,7 +339,7 @@ public class ECSClient implements IECSClient {
      * @param newNode newly created ecsnode
      * @return
      */
-    private boolean updateHashRingOfEveryZnodeUsing(ECSNode newNode, boolean toAdd) {
+    private boolean updateMetadataOfEveryZnodeUsing(ECSNode newNode, boolean toAdd) {
         // update hash ring of every one
         if (toAdd) {
             hashRing.put(newNode.getNodeHash(), newNode);
@@ -351,7 +351,7 @@ public class ECSClient implements IECSClient {
         for (Map.Entry<String, ECSNode> entry: znodeHashMap.entrySet()) {
             String znodePath = entry.getKey();
             ECSNode tempNode = entry.getValue();
-            if (!updateHashRingOfEveryZnodeHelper(znodePath, tempNode)) {
+            if (!updateMetadataOfEveryZnodeHelper(znodePath, tempNode)) {
                 success =  false;
             }
         }
@@ -363,7 +363,7 @@ public class ECSClient implements IECSClient {
      * @param nodes
      * @return
      */
-    private boolean updateHashRingOfEveryZnodeUsing(Collection<IECSNode> nodes, boolean toAdd) {
+    private boolean updateMetadataOfEveryZnodeUsing(Collection<IECSNode> nodes, boolean toAdd) {
         boolean success = true;
         if (toAdd) {
             for (IECSNode node: nodes) {
@@ -380,7 +380,7 @@ public class ECSClient implements IECSClient {
         for (Map.Entry<String, ECSNode> entry: znodeHashMap.entrySet()) {
             String znodePath = entry.getKey();
             ECSNode tempNode = entry.getValue();
-            if (!updateHashRingOfEveryZnodeHelper(znodePath, tempNode) ) {
+            if (!updateMetadataOfEveryZnodeHelper(znodePath, tempNode) ) {
                 success = false;
             }
         }
@@ -392,14 +392,19 @@ public class ECSClient implements IECSClient {
      * The updates to the global hash ring should be done before calling this function
      * @param znodePath
      * @param node
-     * @return
+     * @return update is success or not
      */
-    private boolean updateHashRingOfEveryZnodeHelper(String znodePath, ECSNode node) {
+    private boolean updateMetadataOfEveryZnodeHelper(String znodePath, ECSNode node) {
         node.hashRing = hashRing;
+        node.todo = ECSNode.Action.HashRingChanged;
         // update predecessor
         String predecessor = hashRing.lowerKey(node.getNodeHash());
         if (predecessor == null) {
             predecessor = hashRing.lastKey();
+        }
+        if (node.connected && node.getNodeHashRange()[0].equals(predecessor) == false) {
+            node.todo = ECSNode.Action.Affected;
+            node.targets = findNodesBetween(node.getNodeHashRange()[0], node.getNodeHashRange()[1]);
         }
         node.setNodeHashLowRange(predecessor);
         try {
@@ -416,6 +421,28 @@ public class ECSClient implements IECSClient {
             return false;
         }
         return true;
+    }
+
+    private Collection<IECSNode> findNodesBetween(String lowerHash, String upperHash) {
+        ArrayList<IECSNode> targets = new ArrayList<>();
+        if (lowerHash.compareTo(upperHash) > 0) {
+            // lower is bigger, upper is smaller => wrap around case
+            NavigableMap<String, IECSNode> newNodes = hashRing.headMap(upperHash, false);
+            for (IECSNode node: newNodes.values()) {
+                targets.add(node);
+            }
+            newNodes = hashRing.tailMap(lowerHash, false);
+            for (IECSNode node: newNodes.values()) {
+                targets.add(node);
+            }
+
+        } else {
+            NavigableMap<String, IECSNode> newNodes = hashRing.subMap(lowerHash, false, upperHash, false);
+            for (IECSNode node: newNodes.values()) {
+                targets.add(node);
+            }
+        }
+        return targets;
     }
 
     //---------------IECSClient Implemntation---------------//
@@ -529,7 +556,7 @@ public class ECSClient implements IECSClient {
             for (IECSNode node: nodes) {
                 removeNode(node.getNodeName(), false);
             }
-            updateHashRingOfEveryZnodeUsing(nodes, false);
+            updateMetadataOfEveryZnodeUsing(nodes, false);
             return null;
         }
         try {
@@ -537,7 +564,7 @@ public class ECSClient implements IECSClient {
                 for (IECSNode node: nodes) {
                     removeNode(node.getNodeName(), false);
                 }
-                updateHashRingOfEveryZnodeUsing(nodes, false);
+                updateMetadataOfEveryZnodeUsing(nodes, false);
             }
         } catch (Exception e) {
             // TODO: check when exception is thrown
@@ -563,12 +590,12 @@ public class ECSClient implements IECSClient {
             }
             nodes.add(node);
         }
-        if (!updateHashRingOfEveryZnodeUsing(nodes, true)) {
+        if (!updateMetadataOfEveryZnodeUsing(nodes, true)) {
             // remove nodes
             for (IECSNode node: nodes) {
                 removeNode(node.getNodeName(), false);
             }
-            updateHashRingOfEveryZnodeUsing(nodes, false);
+            updateMetadataOfEveryZnodeUsing(nodes, false);
         }
         return nodes;
 
@@ -631,7 +658,7 @@ public class ECSClient implements IECSClient {
                 System.out.println("node: " + nodeName + " is not found in znodeHashMap");
             }
         }
-        updateHashRingOfEveryZnodeUsing(nodes, false);
+        updateMetadataOfEveryZnodeUsing(nodes, false);
         return allRemoved;
     }
 
