@@ -68,6 +68,10 @@ class ECSNodeManager {
         return allNodes.values();
     }
 
+    public Set<String> getNodeNames() {
+        return allNodes.keySet();
+    }
+
     public Set<Map.Entry<String ,ECSNode>> getEntrySet() {
         return allNodes.entrySet();
     }
@@ -92,7 +96,7 @@ public class ECSClient implements IECSClient {
     private HashMap<String, ECSNode> znodeHashMap = new HashMap<>(); // (znodePath i.e. nodeName, znode)
     private TreeMap<String, IECSNode> hashRing = new TreeMap<>(); // (hash, znode)
     private HashMap<String, Process> processHashMap = new HashMap<>(); // (znodePath i.e. nodeName, processes)
-    private static String configPath = "ecs.config";
+    public static String configPath = "ecs.config";
     private String zkIpAddress = "localhost";
     private int zkPort = 2181;
     private int sessionTimeout = 300000;
@@ -286,7 +290,7 @@ public class ECSClient implements IECSClient {
      * @param nodeName
      * @return
      */
-    private boolean removeNode(String nodeName) {
+    public boolean removeNode(String nodeName) {
         // remove memory representation of node
         ECSNode node = znodeHashMap.remove(nodeName);
         if (node == null || !node.inUse) {
@@ -556,6 +560,7 @@ public class ECSClient implements IECSClient {
             }
             node.todo = ECSNode.Action.Start;
             zk.setData(znodePath, node.toBytes(), stat.getVersion());
+//            awaitNode(znodePath, 2000, true);
         }
         // TODO: may need to await
         return true;
@@ -803,88 +808,12 @@ public class ECSClient implements IECSClient {
 
     //--------------end of IECSClient implementation------------//
 
-    private static boolean running = true;
-    private static final String PROMPT = "ECSClient> ";
-    public static void main(String[] args) {
-        String configPath = ECSClient.configPath;
-        if (args == null || args.length == 0) {
-            System.out.println("No config file provided. Using the default config file");
-        } else if (args.length == 1) {
-            configPath = args[0];
-        } else {
-            System.out.println("You can optionally provide just one argument as the config file path");
-            System.out.println("exiting");
-            System.exit(0);
-        }
-        String cmdLine;
-        System.out.println("type help to view the list of available commands");
-
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-        while (running) {
-            System.out.print(PROMPT);
-            try {
-                cmdLine = reader.readLine();
-                handleCmd(cmdLine);
-            } catch (IOException e) {
-                running = false;
-            }
-
-
-        }
+    public Set<String> getZnodeNames() {
+        return znodeHashMap.keySet();
     }
 
-    private static void handleCmd(String cmdLine) {
-        // TODO: remember to prepend '/' to nodeName when using zookeeper
-        String[] tokens = cmdLine.toLowerCase().split(" ");
-        String cmd = tokens[0];
-        switch (cmd) {
-            case  "start":
-                break;
-            case "stop":
-                break;
-            case "shutdown":
-                break;
-            case "addnode":
-                break;
-            case "addnodes":
-                break;
-            case "removenode":
-                break;
-            case "removenodes":
-                break;
-            case "exit":
-                // TODO: kill the servers
-                running = false;
-                break;
-            default:
-                printHelp();
-                break;
-        }
+    public Set<String> getAllServerNamesInConfigFile() {
+        return allNodes.getNodeNames();
     }
 
-    private static void printHelp() {
-        StringBuilder sb = new StringBuilder();
-        String prefix = "\t";
-        sb.append(prefix);
-        sb.append("List of commands (case-insensitive):\n");
-        sb.append(prefix);
-        sb.append("'addnode cacheStrategy cacheSize': add a server with the specified cache strategy and size.\n");
-        sb.append(prefix);
-        sb.append("'addnodes count cacheStrategy cacheSize': add a number of server with the specified cache strategy and size.\n");
-        sb.append(prefix);
-        sb.append("'start': start all the participating servers.\n");
-        sb.append(prefix);
-        sb.append("'stop': halt all the participating servers.\n");
-        sb.append(prefix);
-        sb.append("'removenode': remove a participating server.\n");
-        sb.append(prefix);
-        sb.append("'removenodes count': remove a number of participating servers.\n");
-        sb.append(prefix);
-        sb.append("'shutdown': kill all the participating servers.\n");
-        sb.append(prefix);
-        sb.append("'exit': kill all the participating servers and exit ECS client\n");
-        sb.append(prefix);
-        sb.append("'help': list all the commands their usage\n");
-        System.out.println(sb.toString());
-    }
 }
