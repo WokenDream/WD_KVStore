@@ -4,6 +4,7 @@ import javax.xml.bind.DatatypeConverter;
 import java.io.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Map;
 import java.util.TreeMap;
 
 /**
@@ -30,7 +31,6 @@ public class ECSNode implements IECSNode, Serializable {
     public boolean inUse = false; // can only be touched by ECS
     public boolean connected = false; // can only be touched by KVServer
     public boolean started = false; // can only be touched by KVServer
-    public boolean stopped = true; // can only be touched by KVServer
     public boolean killed = false; // can only be touched by KVServer
     public Action todo = Action.None;
 
@@ -155,5 +155,13 @@ public class ECSNode implements IECSNode, Serializable {
 
     public TreeMap<String, IECSNode> getHashRing() {
         return hashRing;
+    }
+
+    public IECSNode getSuccessor() {
+        Map.Entry<String, IECSNode> successorEntry = hashRing.higherEntry(hashRange[1]);
+        if (successorEntry == null) {
+            successorEntry = hashRing.firstEntry();
+        }
+        return successorEntry.getValue();
     }
 }

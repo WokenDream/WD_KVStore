@@ -25,20 +25,26 @@ public class Main {
 //            System.out.println(db.inCache("k1"));
 //            System.out.println(db.getKV("k1").getValue());
 
-            KVSimpleStorage db = new KVSimpleStorage("./newDB");
-            db.putKV("k1", "k2");
-            System.out.println(db.inStorage("k1"));
-            System.out.println(db.inCache("k1"));
-            System.out.println(db.getKV("k1").getValue());
-            db.clearStorage();
-            System.out.println(db.inStorage("k1"));
-            System.out.println(db.inCache("k1"));
-            System.out.println(db.getKV("k1").getValue());
-            db.putKV("k1", "k2");
-            System.out.println(db.inStorage("k1"));
-            System.out.println(db.inCache("k1"));
-            System.out.println(db.getKV("k1").getValue());
-            db.deleteKVInRange("0", "FFFFFFFFFFFFFFFF");
+//            KVSimpleStorage db = new KVSimpleStorage("./newDB");
+//            db.putKV("k1", "k2");
+//            System.out.println(db.inStorage("k1"));
+//            System.out.println(db.inCache("k1"));
+//            System.out.println(db.getKV("k1").getValue());
+//            db.clearStorage();
+//            System.out.println(db.inStorage("k1"));
+//            System.out.println(db.inCache("k1"));
+//            System.out.println(db.getKV("k1").getValue());
+//            db.putKV("k1", "k2");
+//            System.out.println(db.inStorage("k1"));
+//            System.out.println(db.inCache("k1"));
+//            System.out.println(db.getKV("k1").getValue());
+//            db.deleteKVInRange("0", "FFFFFFFFFFFFFFFF");
+//            Map<String, String> kvPairs = new TreeMap<>();
+//            kvPairs.put("haha", "haha");
+//            kvPairs.put("lala", "lala");
+//            db.putKV(kvPairs);
+//            db.clearStorage();
+
 //            String key = "updateTestValue";
 //            String val = "initial";
 //            KVStorageResult result = db.putKV(key, val);
@@ -79,6 +85,8 @@ public class Main {
 //            ECSClient client = new ECSClient("./ecs.config", "localhost", 2181, 3000);
 //            client.addNode("LRU", 3000);
 //            client.setupNode("FIFO", 3333);
+            ECSClient.main(args);
+            throw new IOException();
         } catch (IOException e) {
             System.out.println(e.getLocalizedMessage());
         }

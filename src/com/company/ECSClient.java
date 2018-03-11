@@ -92,7 +92,7 @@ public class ECSClient implements IECSClient {
     private HashMap<String, ECSNode> znodeHashMap = new HashMap<>(); // (znodePath i.e. nodeName, ecsnode)
     private TreeMap<String, IECSNode> hashRing = new TreeMap<>(); // (hash, znodepath)
     private HashMap<String, Process> processHashMap = new HashMap<>(); // (znodePath i.e. nodeName, processes)
-    private String configPath = "ecs.config";
+    private static String configPath = "ecs.config";
     private String zkIpAddress = "localhost";
     private int zkPort = 2181;
     private int sessionTimeout = 3000;
@@ -203,7 +203,7 @@ public class ECSClient implements IECSClient {
         if (node == null || !createZnode(node)) {
             return null;
         }
-        if (!updateHashRingOfEveryZnode(node, true)) {
+        if (!updateHashRingOfEveryZnodeUsing(node, true)) {
             removeNode(node.getNodeName(), true);
             return null;
         }
@@ -281,7 +281,7 @@ public class ECSClient implements IECSClient {
                 // TODO: wait till server exits?
                 zk.delete(nodeName, stat.getVersion());
                 if (updateHashRing) {
-                    updateHashRingOfEveryZnode(node, false);
+                    updateHashRingOfEveryZnodeUsing(node, false);
                 }
                 processHashMap.remove(nodeName);
             } catch (KeeperException e) {
@@ -339,7 +339,7 @@ public class ECSClient implements IECSClient {
      * @param newNode newly created ecsnode
      * @return
      */
-    private boolean updateHashRingOfEveryZnode(ECSNode newNode, boolean toAdd) {
+    private boolean updateHashRingOfEveryZnodeUsing(ECSNode newNode, boolean toAdd) {
         // update hash ring of every one
         if (toAdd) {
             hashRing.put(newNode.getNodeHash(), newNode);
@@ -363,7 +363,7 @@ public class ECSClient implements IECSClient {
      * @param nodes
      * @return
      */
-    private boolean updateHashRingOfEveryZnode(Collection<IECSNode> nodes, boolean toAdd) {
+    private boolean updateHashRingOfEveryZnodeUsing(Collection<IECSNode> nodes, boolean toAdd) {
         boolean success = true;
         if (toAdd) {
             for (IECSNode node: nodes) {
@@ -529,7 +529,7 @@ public class ECSClient implements IECSClient {
             for (IECSNode node: nodes) {
                 removeNode(node.getNodeName(), false);
             }
-            updateHashRingOfEveryZnode(nodes, false);
+            updateHashRingOfEveryZnodeUsing(nodes, false);
             return null;
         }
         try {
@@ -537,7 +537,7 @@ public class ECSClient implements IECSClient {
                 for (IECSNode node: nodes) {
                     removeNode(node.getNodeName(), false);
                 }
-                updateHashRingOfEveryZnode(nodes, false);
+                updateHashRingOfEveryZnodeUsing(nodes, false);
             }
         } catch (Exception e) {
             // TODO: check when exception is thrown
@@ -563,12 +563,12 @@ public class ECSClient implements IECSClient {
             }
             nodes.add(node);
         }
-        if (!updateHashRingOfEveryZnode(nodes, true)) {
+        if (!updateHashRingOfEveryZnodeUsing(nodes, true)) {
             // remove nodes
             for (IECSNode node: nodes) {
                 removeNode(node.getNodeName(), false);
             }
-            updateHashRingOfEveryZnode(nodes, false);
+            updateHashRingOfEveryZnodeUsing(nodes, false);
         }
         return nodes;
 
@@ -631,7 +631,7 @@ public class ECSClient implements IECSClient {
                 System.out.println("node: " + nodeName + " is not found in znodeHashMap");
             }
         }
-        updateHashRingOfEveryZnode(nodes, false);
+        updateHashRingOfEveryZnodeUsing(nodes, false);
         return allRemoved;
     }
 
@@ -650,4 +650,88 @@ public class ECSClient implements IECSClient {
     }
 
     //--------------end of IECSClient implementation------------//
+
+    private static boolean running = true;
+    private static final String PROMPT = "ECSClient> ";
+    public static void main(String[] args) {
+        String configPath = ECSClient.configPath;
+        if (args == null || args.length == 0) {
+            System.out.println("No config file provided. Using the default config file");
+        } else if (args.length == 1) {
+            configPath = args[0];
+        } else {
+            System.out.println("You can optionally provide just one argument as the config file path");
+            System.out.println("exiting");
+            System.exit(0);
+        }
+        String cmdLine;
+        System.out.println("type help to view the list of available commands");
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        while (running) {
+            System.out.print(PROMPT);
+            try {
+                cmdLine = reader.readLine();
+                handleCmd(cmdLine);
+            } catch (IOException e) {
+                running = false;
+            }
+
+
+        }
+    }
+
+    private static void handleCmd(String cmdLine) {
+        String[] tokens = cmdLine.toLowerCase().split(" ");
+        String cmd = tokens[0];
+        switch (cmd) {
+            case  "start":
+                break;
+            case "stop":
+                break;
+            case "shutdown":
+                break;
+            case "addnode":
+                break;
+            case "addnodes":
+                break;
+            case "removenode":
+                break;
+            case "removenodes":
+                break;
+            case "exit":
+                // TODO: kill the servers
+                running = false;
+                break;
+            default:
+                printHelp();
+                break;
+        }
+    }
+
+    private static void printHelp() {
+        StringBuilder sb = new StringBuilder();
+        String prefix = "\t";
+        sb.append(prefix);
+        sb.append("List of commands (case-insensitive):\n");
+        sb.append(prefix);
+        sb.append("'addnode cacheStrategy cacheSize': add a server with the specified cache strategy and size.\n");
+        sb.append(prefix);
+        sb.append("'addnodes count cacheStrategy cacheSize': add a number of server with the specified cache strategy and size.\n");
+        sb.append(prefix);
+        sb.append("'start': start all the participating servers.\n");
+        sb.append(prefix);
+        sb.append("'stop': halt all the participating servers.\n");
+        sb.append(prefix);
+        sb.append("'removenode': remove a participating server.\n");
+        sb.append(prefix);
+        sb.append("'removenodes count': remove a number of participating servers.\n");
+        sb.append(prefix);
+        sb.append("'shutdown': kill all the participating servers.\n");
+        sb.append(prefix);
+        sb.append("'exit': kill all the participating servers and exit ECS client\n");
+        sb.append(prefix);
+        sb.append("'help': list all the commands their usage\n");
+        System.out.println(sb.toString());
+    }
 }
