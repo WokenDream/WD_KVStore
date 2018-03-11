@@ -89,8 +89,8 @@ class ECSNodeManager {
 public class ECSClient implements IECSClient {
     private ZooKeeper zk;
     private CountDownLatch countDownLatch = new CountDownLatch(1);// may be unnecessary
-    private HashMap<String, ECSNode> znodeHashMap = new HashMap<>(); // (znodePath i.e. nodeName, ecsnode)
-    private TreeMap<String, IECSNode> hashRing = new TreeMap<>(); // (hash, znodepath)
+    private HashMap<String, ECSNode> znodeHashMap = new HashMap<>(); // (znodePath i.e. nodeName, znode)
+    private TreeMap<String, IECSNode> hashRing = new TreeMap<>(); // (hash, znode)
     private HashMap<String, Process> processHashMap = new HashMap<>(); // (znodePath i.e. nodeName, processes)
     private static String configPath = "ecs.config";
     private String zkIpAddress = "localhost";
@@ -203,8 +203,8 @@ public class ECSClient implements IECSClient {
         if (node == null || !createZnode(node)) {
             return null;
         }
-        if (!updateMetadataOfEveryZnodeUsing(node, true)) {
-            removeNode(node.getNodeName(), true);
+        if (!updateMetadataOfEveryZnodeWhenAdding(node)) {
+            removeNode(node.getNodeName());
             return null;
         }
         return node;
@@ -263,7 +263,7 @@ public class ECSClient implements IECSClient {
      * @param nodeName
      * @return
      */
-    private boolean removeNode(String nodeName, boolean updateHashRing) {
+    private boolean removeNode(String nodeName) {
         // remove memory representation of node
         ECSNode node = znodeHashMap.remove(nodeName);
         if (node == null || !node.inUse) {
@@ -271,18 +271,20 @@ public class ECSClient implements IECSClient {
         }
         allNodes.setNodeInUse(node, false);
 
-        node.todo = ECSNode.Action.Kill;
-
         if (processHashMap.containsKey(nodeName)) {
             try {
-                // kill server and remove znode
-                Stat stat = zk.exists(nodeName, true);
-                stat = zk.setData(nodeName, node.toBytes(), stat.getVersion());
-                // TODO: wait till server exits?
-                zk.delete(nodeName, stat.getVersion());
-                if (updateHashRing) {
-                    updateMetadataOfEveryZnodeUsing(node, false);
-                }
+                updateMetadataOfRemainingZnodesWhenRemoving(node);
+                updateMetadataOfRemovedNode(node);
+                // wait till server exits
+                CountDownLatch latch = new CountDownLatch(1);
+                zk.exists(nodeName, new Watcher() {
+                    @Override
+                    public void process(WatchedEvent event) {
+                        latch.countDown();
+                    }
+                });
+                latch.await();
+                zk.delete(nodeName, -1);
                 processHashMap.remove(nodeName);
             } catch (KeeperException e) {
                 System.out.println(e.getLocalizedMessage());
@@ -339,19 +341,15 @@ public class ECSClient implements IECSClient {
      * @param newNode newly created ecsnode
      * @return
      */
-    private boolean updateMetadataOfEveryZnodeUsing(ECSNode newNode, boolean toAdd) {
+    private boolean updateMetadataOfEveryZnodeWhenAdding(ECSNode newNode) {
         // update hash ring of every one
-        if (toAdd) {
-            hashRing.put(newNode.getNodeHash(), newNode);
-        } else if (hashRing.remove(newNode) == null) {
-            return false;
-        }
+        hashRing.put(newNode.getNodeHash(), newNode);
 
         boolean success = true;
         for (Map.Entry<String, ECSNode> entry: znodeHashMap.entrySet()) {
             String znodePath = entry.getKey();
             ECSNode tempNode = entry.getValue();
-            if (!updateMetadataOfEveryZnodeHelper(znodePath, tempNode)) {
+            if (!updateMetadataOfEveryZnodeWhenAddingHelper(znodePath, tempNode)) {
                 success =  false;
             }
         }
@@ -363,24 +361,16 @@ public class ECSClient implements IECSClient {
      * @param nodes
      * @return
      */
-    private boolean updateMetadataOfEveryZnodeUsing(Collection<IECSNode> nodes, boolean toAdd) {
+    private boolean updateMetadataOfEveryZnodeWhenAdding(Collection<IECSNode> nodes) {
         boolean success = true;
-        if (toAdd) {
-            for (IECSNode node: nodes) {
-                hashRing.put(node.getNodeHashRange()[1], node);
-            }
-        } else {
-            for (IECSNode node: nodes) {
-                if (hashRing.remove(node.getNodeHashRange()[1], node)) {
-                    success = false;
-                }
-            }
+        for (IECSNode node: nodes) {
+            hashRing.put(node.getNodeHashRange()[1], node);
         }
 
         for (Map.Entry<String, ECSNode> entry: znodeHashMap.entrySet()) {
             String znodePath = entry.getKey();
             ECSNode tempNode = entry.getValue();
-            if (!updateMetadataOfEveryZnodeHelper(znodePath, tempNode) ) {
+            if (!updateMetadataOfEveryZnodeWhenAddingHelper(znodePath, tempNode) ) {
                 success = false;
             }
         }
@@ -394,7 +384,7 @@ public class ECSClient implements IECSClient {
      * @param node
      * @return update is success or not
      */
-    private boolean updateMetadataOfEveryZnodeHelper(String znodePath, ECSNode node) {
+    private boolean updateMetadataOfEveryZnodeWhenAddingHelper(String znodePath, ECSNode node) {
         node.hashRing = hashRing;
         node.todo = ECSNode.Action.HashRingChanged;
         // update predecessor
@@ -421,6 +411,88 @@ public class ECSClient implements IECSClient {
             return false;
         }
         return true;
+    }
+
+    private boolean updateMetadataOfRemainingZnodesWhenRemoving(ECSNode oldNode) {
+        // update hash ring of every one
+        if (hashRing.remove(oldNode.getNodeHash()) == null) {
+            return false;
+        }
+
+        boolean success = true;
+        for (Map.Entry<String, ECSNode> entry: znodeHashMap.entrySet()) {
+            String znodePath = entry.getKey();
+            ECSNode tempNode = entry.getValue();
+            if (!updateHashRingOfRemainingZnodesWhenRemovingHelper(znodePath, tempNode)) {
+                success =  false;
+            }
+        }
+        return success;
+    }
+
+    private boolean updateMetadataOfRemainingZnodesWhenRemoving(Collection<IECSNode> nodes) {
+        boolean success = true;
+        for (IECSNode node: nodes) {
+            if (hashRing.remove(node.getNodeHashRange()[1]) == null) {
+                success = false;
+            }
+        }
+
+        for (Map.Entry<String, ECSNode> entry: znodeHashMap.entrySet()) {
+            String znodePath = entry.getKey();
+            ECSNode tempNode = entry.getValue();
+            if (!updateHashRingOfRemainingZnodesWhenRemovingHelper(znodePath, tempNode) ) {
+                success = false;
+            }
+        }
+        return success;
+    }
+
+    private boolean updateHashRingOfRemainingZnodesWhenRemovingHelper(String znodePath, ECSNode node) {
+        node.hashRing = hashRing;
+        node.todo = ECSNode.Action.HashRingChanged;
+        // update predecessor
+        String predecessor = hashRing.lowerKey(node.getNodeHash());
+        if (predecessor == null) {
+            predecessor = hashRing.lastKey();
+        }
+        if (node.connected && node.getNodeHashRange()[0].equals(predecessor) == false) {
+            node.todo = ECSNode.Action.Affected;
+            node.targets.clear();
+        }
+        node.setNodeHashLowRange(predecessor);
+        try {
+            Stat stat = zk.exists(znodePath, true);
+            zk.setData(znodePath, node.toBytes(), stat.getVersion());
+        } catch (InterruptedException e) {
+            System.out.println("ECS Client existing due to interrupted exception");
+            System.exit(-1);
+        } catch (Exception e) {
+            System.out.println(e.getLocalizedMessage());
+            if (e instanceof IOException) {
+                System.out.println("failed to serialie node: " + node.getNodeName());
+            }
+            return false;
+        }
+        return true;
+    }
+
+    private void updateMetadataOfRemovedNodes(Collection<IECSNode> oldNodes) throws KeeperException, InterruptedException, IOException {
+        for (IECSNode temp: oldNodes) {
+            ECSNode oldnode = (ECSNode) temp;
+            oldnode.hashRing = hashRing;
+            oldnode.todo = ECSNode.Action.Kill;
+            Stat stat = zk.exists(oldnode.getNodeName(), true);
+            zk.setData(oldnode.getNodeName(), oldnode.toBytes(), stat.getVersion());
+
+        }
+    }
+
+    private void updateMetadataOfRemovedNode(ECSNode oldnode) throws KeeperException, InterruptedException, IOException {
+        oldnode.hashRing = hashRing;
+        oldnode.todo = ECSNode.Action.Kill;
+        Stat stat = zk.exists(oldnode.getNodeName(), true);
+        zk.setData(oldnode.getNodeName(), oldnode.toBytes(), stat.getVersion());
     }
 
     private Collection<IECSNode> findNodesBetween(String lowerHash, String upperHash) {
@@ -534,7 +606,7 @@ public class ECSClient implements IECSClient {
             return null;
         }
         if (!startNodeServer(node) || awaitNode(node.getNodeName(), sessionTimeout, true)) {
-            removeNode(node.getNodeName(), true);
+            removeNode(node.getNodeName());
         }
         return node;
     }
@@ -554,17 +626,17 @@ public class ECSClient implements IECSClient {
         if (!startNodeServers(nodes)) {
             // remove nodes
             for (IECSNode node: nodes) {
-                removeNode(node.getNodeName(), false);
+                removeNode(node.getNodeName());
             }
-            updateMetadataOfEveryZnodeUsing(nodes, false);
+            updateMetadataOfEveryZnodeWhenAdding(nodes);
             return null;
         }
         try {
             if (!awaitNodes(count, sessionTimeout)) {
                 for (IECSNode node: nodes) {
-                    removeNode(node.getNodeName(), false);
+                    removeNode(node.getNodeName());
                 }
-                updateMetadataOfEveryZnodeUsing(nodes, false);
+                updateMetadataOfEveryZnodeWhenAdding(nodes);
             }
         } catch (Exception e) {
             // TODO: check when exception is thrown
@@ -590,12 +662,12 @@ public class ECSClient implements IECSClient {
             }
             nodes.add(node);
         }
-        if (!updateMetadataOfEveryZnodeUsing(nodes, true)) {
+        if (!updateMetadataOfEveryZnodeWhenAdding(nodes)) {
             // remove nodes
             for (IECSNode node: nodes) {
-                removeNode(node.getNodeName(), false);
+                removeNode(node.getNodeName());
             }
-            updateMetadataOfEveryZnodeUsing(nodes, false);
+            updateMetadataOfEveryZnodeWhenAdding(nodes);
         }
         return nodes;
 
@@ -643,22 +715,52 @@ public class ECSClient implements IECSClient {
      * @return  true on success, false otherwise
      */
     public boolean removeNodes(Collection<String> nodeNames) {
-        // TODO: see removeNode
         boolean allRemoved = true;
-        ArrayList<IECSNode> nodes = new ArrayList<>();
-        ECSNode node;
+        ArrayList<IECSNode> removedNodes = new ArrayList<>();
         for (String nodeName: nodeNames) {
-            if (!removeNode(nodeName, false)) {
+            // remove memory representation of node
+            ECSNode node = znodeHashMap.remove(nodeName);
+            if (node == null || !node.inUse) {
                 allRemoved = false;
-            }
-            node = znodeHashMap.get(nodeName);
-            if (node != null) {
-                nodes.add(node);
-            } else {
                 System.out.println("node: " + nodeName + " is not found in znodeHashMap");
+                continue;
+            }
+            removedNodes.add(node);
+            allNodes.setNodeInUse(node, false);
+            if (processHashMap.containsKey(nodeName)) {
+                processHashMap.remove(nodeName);
             }
         }
-        updateMetadataOfEveryZnodeUsing(nodes, false);
+
+        try {
+            updateMetadataOfRemainingZnodesWhenRemoving(removedNodes);
+            updateMetadataOfRemovedNodes(removedNodes);
+            // wait till servers exit
+            CountDownLatch latch = new CountDownLatch(removedNodes.size());
+            for (IECSNode removedNode: removedNodes) {
+                zk.exists(removedNode.getNodeName(), new Watcher() {
+                    @Override
+                    public void process(WatchedEvent event) {
+                        latch.countDown();
+                    }
+                });
+            }
+            latch.await();
+            for (IECSNode removedNode: removedNodes) {
+                zk.delete(removedNode.getNodeName(), -1);
+            }
+        } catch (KeeperException e) {
+            allRemoved = false;
+            System.out.println(e.getLocalizedMessage());
+        } catch (InterruptedException e) {
+            System.out.println("ECS client existing due to interrupted exception");
+            System.exit(-1);
+        } catch (IOException e) {
+            allRemoved = false;
+            System.out.println("failed to serialize node ");
+            System.out.println(e.getLocalizedMessage());
+        }
+
         return allRemoved;
     }
 
