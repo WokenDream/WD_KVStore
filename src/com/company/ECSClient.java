@@ -160,6 +160,7 @@ public class ECSClient implements IECSClient {
                     existingNode.todo = ECSNode.Action.Kill;
                     zk.setData(node.getNodeName(), existingNode.toBytes(), -1);
                     zk.delete(node.getNodeName(), -1);
+                    System.out.println("deleted");
                 }
             } catch (Exception e) {
                 System.out.println(e.getLocalizedMessage());
@@ -633,7 +634,7 @@ public class ECSClient implements IECSClient {
         if (node == null) {
             return null;
         }
-        if (!startNodeServer(node) || awaitNode(node.getNodeName(), sessionTimeout, true)) {
+        if (!startNodeServer(node) || awaitNode(node.getNodeName(), 3000, true)) {
             removeNode(node.getNodeName());
         }
         return node;
@@ -660,7 +661,7 @@ public class ECSClient implements IECSClient {
             return null;
         }
         try {
-            if (!awaitNodes(count, sessionTimeout)) {
+            if (!awaitNodes(count, 3000)) {
                 for (IECSNode node: nodes) {
                     removeNode(node.getNodeName());
                 }

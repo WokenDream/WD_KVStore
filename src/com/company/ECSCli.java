@@ -3,7 +3,7 @@ package com.company;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Set;
 
@@ -114,6 +114,7 @@ public class ECSCli {
                 break;
             case "get":
                 handleGet(tokens);
+                break;
             case "exit":
                 client.shutdown();
                 running = false;
@@ -129,7 +130,7 @@ public class ECSCli {
             throw new Exception("incorrect arguments are addnode");
         }
         String strategy = tokens[1];
-        if (strategy.equals("fifo") || strategy.equals("lru") || strategy.equals("lfu")) {
+        if (!(strategy.equals("fifo") || strategy.equals("lru") || strategy.equals("lfu"))) {
             throw new Exception("cache strategy can only be FIFO, LRU or LFU");
         }
         int size = 5;
@@ -161,7 +162,7 @@ public class ECSCli {
         }
 
         String strategy = tokens[2];
-        if (strategy.equals("fifo") || strategy.equals("lru") || strategy.equals("lfu")) {
+        if (!(strategy.equals("fifo") || strategy.equals("lru") || strategy.equals("lfu"))) {
             throw new Exception("cache strategy can only be FIFO, LRU or LFU");
         }
 
@@ -192,9 +193,10 @@ public class ECSCli {
             throw new Exception("invalid arguments for removenodes");
         }
 
-        Collection<String> names = new ArrayDeque<>();
+        Collection<String> names = new ArrayList<>();
         for (int i = 1; i < tokens.length; ++i) {
-            names.add(tokens[i]);
+            String name = tokens[i].charAt(0) == '/' ? tokens[i] : "/" + tokens[i];
+            names.add(name);
         }
         return client.removeNodes(names);
     }

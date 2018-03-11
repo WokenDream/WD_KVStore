@@ -85,7 +85,7 @@ public class Main {
 //            ECSClient client = new ECSClient("./ecs.config", "localhost", 2181, 3000);
 //            client.addNode("LRU", 3000);
 //            client.setupNode("FIFO", 3333);
-            ECSClient.main(args);
+            ECSCli.main(args);
             throw new IOException();
         } catch (IOException e) {
             System.out.println(e.getLocalizedMessage());
