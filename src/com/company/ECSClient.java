@@ -106,6 +106,7 @@ public class ECSClient implements IECSClient {
         this.zkPort = zkPort;
         this.sessionTimeout = sessionTimeout;
         connectToZookeeper();
+        deleteExistingZnodes();
     }
 
     public ECSClient(String zkIpAddress, int zkPort) throws IOException {
@@ -113,6 +114,7 @@ public class ECSClient implements IECSClient {
         this.zkIpAddress = zkIpAddress;
         this.zkPort = zkPort;
         connectToZookeeper();
+        deleteExistingZnodes();
 
     }
 
@@ -122,7 +124,6 @@ public class ECSClient implements IECSClient {
      * Connect to zookeeper; block until connection is made
      * @throws IOException
      */
-    // TODO: delete all the znode servers upon startup
     private void connectToZookeeper() throws IOException {
         zk = new ZooKeeper(zkIpAddress + ":" + zkPort, sessionTimeout, new Watcher() {
             @Override
@@ -139,6 +140,27 @@ public class ECSClient implements IECSClient {
             System.out.println(e.getLocalizedMessage());
             System.out.println("failed to  initialize ECS Client, exiting");
             System.exit(-1);
+        }
+    }
+
+    private void deleteExistingZnodes() {
+        System.out.println("cleaning exiting znodes if any");
+        Collection<ECSNode> nodes =  allNodes.getNodes();
+        for (ECSNode node: nodes) {
+            try {
+                Stat stat = zk.exists(node.getNodeName(), true);
+                if (stat != null) {
+                    System.out.println("cleaning " + node.getNodeName());
+                    byte[] bytes = zk.getData(node.getNodeName(), true, stat);
+                    ECSNode existingNode = ECSNode.fromBytes(bytes);
+                    existingNode.todo = ECSNode.Action.Kill;
+                    zk.setData(node.getNodeName(), existingNode.toBytes(), -1);
+                    zk.delete(node.getNodeName(), -1);
+                }
+            } catch (Exception e) {
+                System.out.println(e.getLocalizedMessage());
+            }
+
         }
     }
 
@@ -277,7 +299,7 @@ public class ECSClient implements IECSClient {
                 updateMetadataOfRemainingZnodesWhenRemoving(node);
                 updateMetadataOfRemovedNode(node);
                 // wait till server exits
-                CountDownLatch latch = new CountDownLatch(1);
+                final CountDownLatch latch = new CountDownLatch(1);
                 zk.exists(nodeName, new Watcher() {
                     @Override
                     public void process(WatchedEvent event) {
@@ -737,7 +759,7 @@ public class ECSClient implements IECSClient {
             updateMetadataOfRemainingZnodesWhenRemoving(removedNodes);
             updateMetadataOfRemovedNodes(removedNodes);
             // wait till servers exit
-            CountDownLatch latch = new CountDownLatch(removedNodes.size());
+            final CountDownLatch latch = new CountDownLatch(removedNodes.size());
             for (IECSNode removedNode: removedNodes) {
                 zk.exists(removedNode.getNodeName(), new Watcher() {
                     @Override
