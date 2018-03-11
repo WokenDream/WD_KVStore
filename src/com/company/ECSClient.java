@@ -95,7 +95,7 @@ public class ECSClient implements IECSClient {
     private static String configPath = "ecs.config";
     private String zkIpAddress = "localhost";
     private int zkPort = 2181;
-    private int sessionTimeout = 3000;
+    private int sessionTimeout = 300000;
 
     private ECSNodeManager allNodes;
 
@@ -122,6 +122,7 @@ public class ECSClient implements IECSClient {
      * Connect to zookeeper; block until connection is made
      * @throws IOException
      */
+    // TODO: delete all the znode servers upon startup
     private void connectToZookeeper() throws IOException {
         zk = new ZooKeeper(zkIpAddress + ":" + zkPort, sessionTimeout, new Watcher() {
             @Override
@@ -517,7 +518,7 @@ public class ECSClient implements IECSClient {
         return targets;
     }
 
-    //---------------IECSClient Implemntation---------------//
+    //---------------IECSClient Implementation---------------//
     /**
      * Starts the storage service by calling start() on all KVServer instances that participate in the service.\
      * @throws Exception    some meaningfull exception on failure
@@ -811,6 +812,7 @@ public class ECSClient implements IECSClient {
     }
 
     private static void handleCmd(String cmdLine) {
+        // TODO: remember to prepend '/' to nodeName when using zookeeper
         String[] tokens = cmdLine.toLowerCase().split(" ");
         String cmd = tokens[0];
         switch (cmd) {
